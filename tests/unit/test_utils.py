@@ -86,3 +86,52 @@ def test_from_url(url: str, kwargs: dict[str, Any]):
             timeout=DEFAULT_TIMEOUT,
             logger=LOGGER,
         )
+
+
+example_hash = "51ba7d0dd45ab9b9564329c33f4f97493b677924"
+
+
+@pytest.mark.parametrize("arg", [float(1), "non-hash-string"])
+def test_parse_id_raise(arg):
+    with pytest.raises(ValueError, match=f"{arg} is not valid torrent id"):
+        _parse_torrent_id(arg)
+
+
+@pytest.mark.parametrize(
+    ("arg", "expected"),
+    [
+        ("recently-active", "recently-active"),
+        (example_hash, [example_hash]),
+        ((2, example_hash), [2, example_hash]),
+        (3, [3]),
+        (None, []),
+    ],
+)
+def test_parse_torrent_ids(arg, expected):
+    assert _parse_torrent_ids(arg) == expected, f"parse_torrent_ids({arg}) != {expected}"
+
+
+@pytest.mark.parametrize("arg", ["not-recently-active", "non-hash-string", -1, 1.1, "5:10", "5,6,8,9,10"])
+def test_parse_torrent_ids_value_error(arg):
+    with pytest.raises(ValueError, match="torrent id"):
+        _parse_torrent_ids(arg)
+
+
+def test_try_read_torrent_path(tmp_path):
+    p = tmp_path / "test.torrent"
+    p.write_bytes(b"data")
+    assert _try_read_torrent(p) == "ZGF0YQ=="
+
+
+def test_try_read_torrent_file_obj():
+    f = io.BytesIO(b"data")
+    assert _try_read_torrent(f) == "ZGF0YQ=="
+
+
+def test_try_read_torrent_bytes():
+    assert _try_read_torrent(b"data") == "ZGF0YQ=="
+
+
+def test_try_read_torrent_url():
+    assert _try_read_torrent("http://example.com/t.torrent") is None
+    assert _try_read_torrent("magnet:?xt=urn:btih:hash") is None
