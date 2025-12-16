@@ -110,7 +110,7 @@ select = [
     "YTT",
     "UP",
     "FA100",
-    "FA102"
+    "FA102",
 ]
 extend-fixable = ['UP']
 ignore = [
@@ -146,6 +146,11 @@ ignore = [
     'PGH003',
     'TC002',
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Address SLF001: Private member access is necessary for 100% coverage mocking
+# Address S108: Tests often use /tmp/ for socket/path simulation
+"tests/*" = ["SLF001", "S108"]
 
 [tool.pyright]
 root = '.'

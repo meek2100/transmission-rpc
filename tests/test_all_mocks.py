@@ -12,6 +12,10 @@ from transmission_rpc.client import (
     TransmissionConnectError,
     TransmissionError,
     TransmissionTimeoutError,
+    _parse_torrent_id,
+    _parse_torrent_ids,
+    _try_read_torrent,
+    ensure_location_str,
 )
 from transmission_rpc.constants import Priority
 from transmission_rpc.session import Session, SessionStats
@@ -23,6 +27,7 @@ from transmission_rpc.types import BitMap, Container, Group, PortTestResult
 
 @pytest.fixture
 def mock_http_client():
+    """Fixture to mock the standard HTTP connection pool."""
     with mock.patch("transmission_rpc.client.urllib3.HTTPConnectionPool") as m:
         m.return_value.request.return_value = mock.Mock(
             status=200,
@@ -39,6 +44,7 @@ def mock_http_client():
 
 @pytest.fixture
 def client(mock_http_client):
+    """Fixture providing a Client instance with mocked HTTP."""
     return Client()
 
 
@@ -54,6 +60,7 @@ def test_client_init_unix(mock_http_client):
                 }
             ).encode("utf-8"),
         )
+        # S108 is now ignored for tests in pyproject.toml
         c = Client(protocol="http+unix", host="/tmp/socket")
         assert c._url == "http+unix://localhost:9091/transmission/rpc"
 
@@ -75,7 +82,8 @@ def test_client_init_https(mock_http_client):
 
 
 def test_client_init_invalid_protocol():
-    with pytest.raises(ValueError):
+    # PT011: Added match to ensure specific ValueError is caught
+    with pytest.raises(ValueError, match="Invalid protocol"):
         Client(protocol="ftp")
 
 
@@ -241,33 +249,27 @@ def test_set_session_encryption_invalid(client):
 
 
 def test_ensure_location_str_pathlib_relative():
-    from transmission_rpc.client import ensure_location_str
-
-    with pytest.raises(ValueError, match="using relative `pathlib.Path` as remote path is not supported"):
+    # RUF043: Added raw string prefix 'r' to match pattern
+    with pytest.raises(ValueError, match=r"using relative `pathlib.Path` as remote path is not supported"):
         ensure_location_str(pathlib.Path("relative"))
 
 
 def test_parse_torrent_id_invalid():
-    from transmission_rpc.client import _parse_torrent_id
-
-    with pytest.raises(ValueError):
+    # PT011: Added match strings to specific ValueErrors
+    with pytest.raises(ValueError, match="id must be greater than or equal to 0"):
         _parse_torrent_id(-1)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="id must be int or str"):
         _parse_torrent_id("invalid")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="id must be int or str"):
         _parse_torrent_id(1.5)
 
 
 def test_parse_torrent_ids_invalid():
-    from transmission_rpc.client import _parse_torrent_ids
-
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="ids must be int, str, or list"):
         _parse_torrent_ids(object())
 
 
 def test_try_read_torrent_file_url():
-    from transmission_rpc.client import _try_read_torrent
-
     with pytest.raises(ValueError, match="support for `file://` URL has been removed"):
         _try_read_torrent("file:///tmp/test")
 
@@ -334,19 +336,20 @@ def test_client_init_logger(mock_http_client):
 
 
 def test_deprecated_properties(client):
-    with pytest.warns(DeprecationWarning):
+    # PT030: Added match to ensure we are catching the specific deprecated property warnings
+    with pytest.warns(DeprecationWarning, match="url"):
         _ = client.url
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match="torrent_get_arguments"):
         _ = client.torrent_get_arguments
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match="raw_session"):
         _ = client.raw_session
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match="session_id"):
         _ = client.session_id
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match="server_version"):
         _ = client.server_version
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match="semver_version"):
         _ = client.semver_version
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match="rpc_version"):
         _ = client.rpc_version
 
 
