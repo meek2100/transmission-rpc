@@ -7,6 +7,7 @@ from transmission_rpc.constants import Priority
 
 class Container:
     fields: dict[str, Any]  #: raw response data
+    __slots__ = ("fields",)
 
     def __init__(self, *, fields: dict[str, Any]):
         self.fields = fields
@@ -47,6 +48,8 @@ class Group(Container):
     https://github.com/transmission/transmission/blob/4.0.5/docs/rpc-spec.md#482-bandwidth-group-accessor-group-get
     """
 
+    __slots__ = ()
+
     @property
     def name(self) -> str:
         """Bandwidth group name"""
@@ -84,6 +87,8 @@ class PortTestResult(Container):
 
     https://github.com/transmission/transmission/blob/5d159e0/docs/rpc-spec.md#44-port-checking
     """
+
+    __slots__ = ()
 
     @property
     def port_is_open(self) -> bool:

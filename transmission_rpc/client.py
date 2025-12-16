@@ -9,7 +9,7 @@ import string
 import time
 import types
 from collections.abc import Iterable
-from typing import Any, BinaryIO, TypeVar, Union
+from typing import Any, BinaryIO, TypeVar
 from urllib.parse import urlparse
 
 import certifi
@@ -39,15 +39,15 @@ __USER_AGENT__ = f"transmission-rpc/{__version__} (https://github.com/trim21/tra
 
 _hex_chars = frozenset(string.hexdigits.lower())
 
-_TorrentID = Union[int, str]
-_TorrentIDs = Union[_TorrentID, list[_TorrentID], None]
+_TorrentID = int | str
+_TorrentIDs = _TorrentID | list[_TorrentID] | None
 
 _header_session_id_key = "x-transmission-session-id"
 
 DEFAULT_TIMEOUT = 30.0
 
 # urllib3 may remove support for int/float in the future
-_Timeout = Union[Timeout, int, float]
+_Timeout = Timeout | int | float
 
 
 class ResponseData(TypedDict):
