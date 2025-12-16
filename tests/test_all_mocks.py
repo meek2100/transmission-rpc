@@ -1,19 +1,25 @@
+import json
+import pathlib
+from unittest import mock
 
 import pytest
-from unittest import mock
-import json
 import urllib3
-from urllib3.exceptions import TimeoutError as U3TimeoutError
-import io
-import pathlib
 
-from transmission_rpc.client import Client, RpcMethod, TransmissionError, TransmissionTimeoutError, TransmissionConnectError, TransmissionAuthError
-from transmission_rpc.torrent import Torrent, FileStat, Tracker, TrackerStats, PeersFrom
-from transmission_rpc.session import Session, SessionStats
-from transmission_rpc.types import Group, Container, PortTestResult, BitMap
+from transmission_rpc.client import (
+    Client,
+    RpcMethod,
+    TransmissionAuthError,
+    TransmissionConnectError,
+    TransmissionError,
+    TransmissionTimeoutError,
+)
 from transmission_rpc.constants import Priority
+from transmission_rpc.session import Session, SessionStats
+from transmission_rpc.torrent import FileStat, PeersFrom, Torrent, Tracker, TrackerStats
+from transmission_rpc.types import BitMap, Container, Group, PortTestResult
 
 # --- Mock Client Tests ---
+
 
 @pytest.fixture
 def mock_http_client():
@@ -21,58 +27,57 @@ def mock_http_client():
         m.return_value.request.return_value = mock.Mock(
             status=200,
             headers={"x-transmission-session-id": "session_id"},
-            data=json.dumps({
-                "result": "success",
-                "arguments": {
-                    "rpc-version": 17,
-                    "rpc-version-semver": "5.3.0",
-                    "version": "4.0.0"
+            data=json.dumps(
+                {
+                    "result": "success",
+                    "arguments": {"rpc-version": 17, "rpc-version-semver": "5.3.0", "version": "4.0.0"},
                 }
-            }).encode("utf-8")
+            ).encode("utf-8"),
         )
         yield m
+
 
 @pytest.fixture
 def client(mock_http_client):
     return Client()
+
 
 def test_client_init_unix(mock_http_client):
     with mock.patch("transmission_rpc.client.UnixHTTPConnectionPool") as m:
         m.return_value.request.return_value = mock.Mock(
             status=200,
             headers={"x-transmission-session-id": "session_id"},
-            data=json.dumps({
-                "result": "success",
-                "arguments": {
-                    "rpc-version": 17,
-                    "rpc-version-semver": "5.3.0",
-                    "version": "4.0.0"
+            data=json.dumps(
+                {
+                    "result": "success",
+                    "arguments": {"rpc-version": 17, "rpc-version-semver": "5.3.0", "version": "4.0.0"},
                 }
-            }).encode("utf-8")
+            ).encode("utf-8"),
         )
         c = Client(protocol="http+unix", host="/tmp/socket")
         assert c._url == "http+unix://localhost:9091/transmission/rpc"
+
 
 def test_client_init_https(mock_http_client):
     with mock.patch("transmission_rpc.client.urllib3.HTTPSConnectionPool") as m:
         m.return_value.request.return_value = mock.Mock(
             status=200,
             headers={"x-transmission-session-id": "session_id"},
-            data=json.dumps({
-                "result": "success",
-                "arguments": {
-                    "rpc-version": 17,
-                    "rpc-version-semver": "5.3.0",
-                    "version": "4.0.0"
+            data=json.dumps(
+                {
+                    "result": "success",
+                    "arguments": {"rpc-version": 17, "rpc-version-semver": "5.3.0", "version": "4.0.0"},
                 }
-            }).encode("utf-8")
+            ).encode("utf-8"),
         )
         c = Client(protocol="https")
         assert c._url == "https://127.0.0.1:9091/transmission/rpc"
 
+
 def test_client_init_invalid_protocol():
     with pytest.raises(ValueError):
         Client(protocol="ftp")
+
 
 def test_client_timeout_setter(client):
     client.timeout = urllib3.Timeout(10.0)
@@ -82,37 +87,43 @@ def test_client_timeout_setter(client):
     del client.timeout
     assert client.timeout.total == 30.0
 
+
 def test_http_query_timeout_error(client):
     client._Client__http_client.request.side_effect = urllib3.exceptions.TimeoutError
     with pytest.raises(TransmissionTimeoutError):
         client._http_query({}, timeout=1)
+
 
 def test_http_query_connection_error(client):
     client._Client__http_client.request.side_effect = urllib3.exceptions.ConnectionError
     with pytest.raises(TransmissionConnectError):
         client._http_query({}, timeout=1)
 
+
 def test_http_query_auth_error(client):
     client._Client__http_client.request.return_value = mock.Mock(status=401, headers={}, data=b"")
     with pytest.raises(TransmissionAuthError):
         client._http_query({}, timeout=1)
 
+
 def test_http_query_too_many_requests(client):
-    client._Client__http_client.request.return_value = mock.Mock(status=409, headers={"x-transmission-session-id": "new_id"}, data=b"")
+    client._Client__http_client.request.return_value = mock.Mock(
+        status=409, headers={"x-transmission-session-id": "new_id"}, data=b""
+    )
     client._Client__http_client.request.side_effect = [
-         mock.Mock(status=409, headers={"x-transmission-session-id": "id1"}, data=b""),
-         mock.Mock(status=409, headers={"x-transmission-session-id": "id2"}, data=b""),
-         mock.Mock(status=409, headers={"x-transmission-session-id": "id3"}, data=b""),
+        mock.Mock(status=409, headers={"x-transmission-session-id": "id1"}, data=b""),
+        mock.Mock(status=409, headers={"x-transmission-session-id": "id2"}, data=b""),
+        mock.Mock(status=409, headers={"x-transmission-session-id": "id3"}, data=b""),
     ]
     with pytest.raises(TransmissionError, match="too much request"):
         client._http_query({}, timeout=1)
 
+
 def test_request_invalid_json(client):
-    client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=b"invalid json"
-    )
+    client._Client__http_client.request.return_value = mock.Mock(status=200, headers={}, data=b"invalid json")
     with pytest.raises(TransmissionError, match="failed to parse response as json"):
         client._request(RpcMethod.TorrentGet)
+
 
 def test_request_missing_result(client):
     client._Client__http_client.request.return_value = mock.Mock(
@@ -121,6 +132,7 @@ def test_request_missing_result(client):
     with pytest.raises(TransmissionError, match="Query failed, response data missing without result"):
         client._request(RpcMethod.TorrentGet)
 
+
 def test_request_failed_result(client):
     client._Client__http_client.request.return_value = mock.Mock(
         status=200, headers={}, data=json.dumps({"result": "failure", "arguments": {}}).encode()
@@ -128,115 +140,116 @@ def test_request_failed_result(client):
     with pytest.raises(TransmissionError, match='Query failed with result "failure"'):
         client._request(RpcMethod.TorrentGet)
 
+
 def test_add_torrent_file(client):
     client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=json.dumps({
-            "result": "success",
-            "arguments": {
-                "torrent-added": {
-                    "id": 1,
-                    "name": "test",
-                    "hashString": "hash"
-                }
-            }
-        }).encode()
+        status=200,
+        headers={},
+        data=json.dumps(
+            {"result": "success", "arguments": {"torrent-added": {"id": 1, "name": "test", "hashString": "hash"}}}
+        ).encode(),
     )
     with mock.patch("builtins.open", mock.mock_open(read_data=b"data")):
         torrent = client.add_torrent(b"data")
         assert torrent.id == 1
 
+
 def test_add_torrent_duplicate(client):
     client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=json.dumps({
-            "result": "success",
-            "arguments": {
-                "torrent-duplicate": {
-                    "id": 1,
-                    "name": "test",
-                    "hashString": "hash"
-                }
-            }
-        }).encode()
+        status=200,
+        headers={},
+        data=json.dumps(
+            {"result": "success", "arguments": {"torrent-duplicate": {"id": 1, "name": "test", "hashString": "hash"}}}
+        ).encode(),
     )
     torrent = client.add_torrent(b"data")
     assert torrent.id == 1
 
+
 def test_add_torrent_invalid_response(client):
     client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=json.dumps({
-            "result": "success",
-            "arguments": {}
-        }).encode()
+        status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     with pytest.raises(TransmissionError, match="Invalid torrent-add response"):
         client.add_torrent(b"data")
 
+
 def test_session_stats(client):
     client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=json.dumps({
-            "result": "success",
-            "arguments": {
-                "activeTorrentCount": 1,
-                "downloadSpeed": 1000,
-                "pausedTorrentCount": 0,
-                "torrentCount": 1,
-                "uploadSpeed": 500,
-                "cumulative-stats": {},
-                "current-stats": {}
-            }
-        }).encode()
-    )
-    stats = client.session_stats()
-    assert stats.active_torrent_count == 1
-
-def test_session_stats_old(client):
-    client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=json.dumps({
-            "result": "success",
-            "arguments": {
-                "session-stats": {
+        status=200,
+        headers={},
+        data=json.dumps(
+            {
+                "result": "success",
+                "arguments": {
                     "activeTorrentCount": 1,
                     "downloadSpeed": 1000,
                     "pausedTorrentCount": 0,
                     "torrentCount": 1,
                     "uploadSpeed": 500,
                     "cumulative-stats": {},
-                    "current-stats": {}
-                }
+                    "current-stats": {},
+                },
             }
-        }).encode()
+        ).encode(),
     )
     stats = client.session_stats()
     assert stats.active_torrent_count == 1
 
+
+def test_session_stats_old(client):
+    client._Client__http_client.request.return_value = mock.Mock(
+        status=200,
+        headers={},
+        data=json.dumps(
+            {
+                "result": "success",
+                "arguments": {
+                    "session-stats": {
+                        "activeTorrentCount": 1,
+                        "downloadSpeed": 1000,
+                        "pausedTorrentCount": 0,
+                        "torrentCount": 1,
+                        "uploadSpeed": 500,
+                        "cumulative-stats": {},
+                        "current-stats": {},
+                    }
+                },
+            }
+        ).encode(),
+    )
+    stats = client.session_stats()
+    assert stats.active_torrent_count == 1
+
+
 def test_get_torrent_not_found(client):
     client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=json.dumps({
-            "result": "success",
-            "arguments": {
-                "torrents": []
-            }
-        }).encode()
+        status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"torrents": []}}).encode()
     )
     with pytest.raises(KeyError, match="Torrent not found in result"):
         client.get_torrent(1)
+
 
 def test_change_torrent_empty(client):
     with pytest.raises(ValueError, match="No arguments to set"):
         client.change_torrent(1)
 
+
 def test_set_session_encryption_invalid(client):
     with pytest.raises(ValueError, match="Invalid encryption value"):
         client.set_session(encryption="invalid")
 
+
 def test_ensure_location_str_pathlib_relative():
-    import pathlib
     from transmission_rpc.client import ensure_location_str
+
     with pytest.raises(ValueError, match="using relative `pathlib.Path` as remote path is not supported"):
         ensure_location_str(pathlib.Path("relative"))
 
+
 def test_parse_torrent_id_invalid():
     from transmission_rpc.client import _parse_torrent_id
+
     with pytest.raises(ValueError):
         _parse_torrent_id(-1)
     with pytest.raises(ValueError):
@@ -244,78 +257,81 @@ def test_parse_torrent_id_invalid():
     with pytest.raises(ValueError):
         _parse_torrent_id(1.5)
 
+
 def test_parse_torrent_ids_invalid():
     from transmission_rpc.client import _parse_torrent_ids
+
     with pytest.raises(ValueError):
         _parse_torrent_ids(object())
 
+
 def test_try_read_torrent_file_url():
     from transmission_rpc.client import _try_read_torrent
+
     with pytest.raises(ValueError, match="support for `file://` URL has been removed"):
         _try_read_torrent("file:///tmp/test")
 
+
 def test_port_test(client):
     client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=json.dumps({
-            "result": "success",
-            "arguments": {"port-is-open": True}
-        }).encode()
+        status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"port-is-open": True}}).encode()
     )
     assert client.port_test().port_is_open
 
+
 def test_free_space_success(client):
     client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=json.dumps({
-            "result": "success",
-            "arguments": {"path": "/data", "size-bytes": 100}
-        }).encode()
+        status=200,
+        headers={},
+        data=json.dumps({"result": "success", "arguments": {"path": "/data", "size-bytes": 100}}).encode(),
     )
     assert client.free_space("/data") == 100
 
+
 def test_free_space_fail(client):
     client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=json.dumps({
-            "result": "success",
-            "arguments": {"path": "/other", "size-bytes": 100}
-        }).encode()
+        status=200,
+        headers={},
+        data=json.dumps({"result": "success", "arguments": {"path": "/other", "size-bytes": 100}}).encode(),
     )
     assert client.free_space("/data") is None
 
+
 def test_get_group(client):
     client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=json.dumps({
-            "result": "success",
-            "arguments": {"group": [{"name": "test"}]}
-        }).encode()
+        status=200,
+        headers={},
+        data=json.dumps({"result": "success", "arguments": {"group": [{"name": "test"}]}}).encode(),
     )
     assert client.get_group("test").name == "test"
 
+
 def test_get_group_none(client):
     client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=json.dumps({
-            "result": "success",
-            "arguments": {"group": []}
-        }).encode()
+        status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"group": []}}).encode()
     )
     assert client.get_group("test") is None
 
+
 def test_get_groups(client):
     client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=json.dumps({
-            "result": "success",
-            "arguments": {"group": [{"name": "test"}]}
-        }).encode()
+        status=200,
+        headers={},
+        data=json.dumps({"result": "success", "arguments": {"group": [{"name": "test"}]}}).encode(),
     )
     groups = client.get_groups()
     assert "test" in groups
+
 
 def test_context_manager(client):
     with client as c:
         assert c is client
 
+
 def test_client_init_logger(mock_http_client):
     with pytest.raises(TypeError):
         Client(logger="not a logger")
+
 
 def test_deprecated_properties(client):
     with pytest.warns(DeprecationWarning):
@@ -333,14 +349,17 @@ def test_deprecated_properties(client):
     with pytest.warns(DeprecationWarning):
         _ = client.rpc_version
 
+
 def test_add_torrent_kwargs(client):
     client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=json.dumps({
-            "result": "success",
-            "arguments": {"torrent-added": {"id": 1, "name": "n", "hashString": "h"}}
-        }).encode()
+        status=200,
+        headers={},
+        data=json.dumps(
+            {"result": "success", "arguments": {"torrent-added": {"id": 1, "name": "n", "hashString": "h"}}}
+        ).encode(),
     )
     client.add_torrent("magnet:?xt=urn:btih:hash", labels=["l1"], sequential_download=True)
+
 
 def test_move_torrent_data(client):
     client._Client__http_client.request.return_value = mock.Mock(
@@ -348,14 +367,15 @@ def test_move_torrent_data(client):
     )
     client.move_torrent_data(1, "/new/path")
 
+
 def test_rename_torrent_path(client):
     client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=json.dumps({
-            "result": "success",
-            "arguments": {"path": "/new/path", "name": "new_name"}
-        }).encode()
+        status=200,
+        headers={},
+        data=json.dumps({"result": "success", "arguments": {"path": "/new/path", "name": "new_name"}}).encode(),
     )
     assert client.rename_torrent_path(1, "/old/path", "new_name") == ("/new/path", "new_name")
+
 
 def test_queue_ops(client):
     client._Client__http_client.request.return_value = mock.Mock(
@@ -366,11 +386,13 @@ def test_queue_ops(client):
     client.queue_up(1)
     client.queue_down(1)
 
+
 def test_session_close(client):
     client._Client__http_client.request.return_value = mock.Mock(
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     client.session_close()
+
 
 def test_set_group(client):
     client._Client__http_client.request.return_value = mock.Mock(
@@ -378,31 +400,36 @@ def test_set_group(client):
     )
     client.set_group("g1")
 
+
 def test_blocklist_update(client):
     client._Client__http_client.request.return_value = mock.Mock(
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"blocklist-size": 10}}).encode()
     )
     assert client.blocklist_update() == 10
 
+
 def test_get_recently_active_torrents(client):
     client._Client__http_client.request.return_value = mock.Mock(
-        status=200, headers={}, data=json.dumps({
-            "result": "success",
-            "arguments": {
-                "torrents": [{"id": 1, "name": "n", "hashString": "h"}],
-                "removed": [2]
+        status=200,
+        headers={},
+        data=json.dumps(
+            {
+                "result": "success",
+                "arguments": {"torrents": [{"id": 1, "name": "n", "hashString": "h"}], "removed": [2]},
             }
-        }).encode()
+        ).encode(),
     )
     active, removed = client.get_recently_active_torrents()
     assert len(active) == 1
     assert removed == [2]
+
 
 def test_remove_torrent(client):
     client._Client__http_client.request.return_value = mock.Mock(
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     client.remove_torrent(1)
+
 
 def test_start_torrent(client):
     client._Client__http_client.request.return_value = mock.Mock(
@@ -411,19 +438,23 @@ def test_start_torrent(client):
     client.start_torrent(1)
     client.start_torrent(1, bypass_queue=True)
 
+
 def test_start_all(client):
     client._Client__http_client.request.side_effect = [
         mock.Mock(
-            status=200, headers={}, data=json.dumps({
-                "result": "success",
-                "arguments": {"torrents": [{"id": 1, "queuePosition": 1, "name": "n", "hashString": "h"}]}
-            }).encode()
+            status=200,
+            headers={},
+            data=json.dumps(
+                {
+                    "result": "success",
+                    "arguments": {"torrents": [{"id": 1, "queuePosition": 1, "name": "n", "hashString": "h"}]},
+                }
+            ).encode(),
         ),
-        mock.Mock(
-            status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
-        )
+        mock.Mock(status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()),
     ]
     client.start_all()
+
 
 def test_stop_torrent(client):
     client._Client__http_client.request.return_value = mock.Mock(
@@ -431,11 +462,13 @@ def test_stop_torrent(client):
     )
     client.stop_torrent(1)
 
+
 def test_verify_torrent(client):
     client._Client__http_client.request.return_value = mock.Mock(
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     client.verify_torrent(1)
+
 
 def test_reannounce_torrent(client):
     client._Client__http_client.request.return_value = mock.Mock(
@@ -443,7 +476,9 @@ def test_reannounce_torrent(client):
     )
     client.reannounce_torrent(1)
 
+
 # --- Session Tests ---
+
 
 def test_set_session_all_args(client):
     client._Client__http_client.request.return_value = mock.Mock(
@@ -497,76 +532,80 @@ def test_set_session_all_args(client):
         script_torrent_done_seeding_enabled=True,
         script_torrent_added_enabled=True,
         script_torrent_added_filename="added.sh",
-        unknown_arg="value"
+        unknown_arg="value",
     )
+
 
 def test_set_session_warning(client):
     client._Client__http_client.request.return_value = mock.Mock(
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     client._Client__protocol_version = 14
-    with mock.patch.object(client.logger, 'warning') as mock_warning:
+    with mock.patch.object(client.logger, "warning") as mock_warning:
         client.set_session(default_trackers=["tracker"])
         mock_warning.assert_called()
 
+
 # --- Type Tests ---
+
 
 def test_container_init():
     c = Container(fields={"key": "value"})
     assert c.fields["key"] == "value"
 
+
 def test_container_getattr():
     c = Container(fields={"key": "value"})
     assert c.get("key") == "value"
+
 
 def test_container_repr():
     c = Container(fields={"key": "value"})
     assert isinstance(repr(c), str)
 
+
 def test_session_init():
     s = Session(fields={"version": "2.94"})
     assert s.version == "2.94"
 
+
 def test_session_stats_init():
     s = SessionStats(fields={"activeTorrentCount": 10})
     assert s.active_torrent_count == 10
+
 
 def test_torrent_init():
     t = Torrent(fields={"id": 1, "name": "test"})
     assert t.id == 1
     assert t.name == "test"
 
+
 def test_torrent_getattr():
     t = Torrent(fields={"id": 1, "status": 4})
     assert t.status == "downloading"
+
 
 def test_group_init():
     g = Group(fields={"name": "test"})
     assert g.name == "test"
 
+
 def test_file_stat():
-    data = {
-        "bytesCompleted": 100,
-        "wanted": True,
-        "priority": 1
-    }
+    data = {"bytesCompleted": 100, "wanted": True, "priority": 1}
     fs = FileStat(fields=data)
     assert fs.bytesCompleted == 100
     assert fs.wanted is True
     assert fs.priority == 1
 
+
 def test_tracker():
-    data = {
-        "announce": "url",
-        "id": 1,
-        "scrape": "url",
-        "tier": 1
-    }
+    data = {"announce": "url", "id": 1, "scrape": "url", "tier": 1}
     t = Tracker(fields=data)
     assert t.announce == "url"
     assert t.id == 1
     assert t.scrape == "url"
     assert t.tier == 1
+
 
 def test_tracker_stats():
     data = {
@@ -596,7 +635,7 @@ def test_tracker_stats():
         "scrapeState": 1,
         "seederCount": 1,
         "tier": 1,
-        "sitename": "site"
+        "sitename": "site",
     }
     t = TrackerStats(fields=data)
     assert t.announce == "url"
@@ -627,6 +666,7 @@ def test_tracker_stats():
     assert t.tier == 1
     assert t.site_name == "site"
 
+
 def test_peers_from():
     data = {
         "fromCache": 1,
@@ -635,7 +675,7 @@ def test_peers_from():
         "fromLpd": 4,
         "fromLtep": 5,
         "fromPex": 6,
-        "fromTracker": 7
+        "fromTracker": 7,
     }
     p = PeersFrom(fields=data)
     assert p.from_cache == 1
@@ -646,6 +686,7 @@ def test_peers_from():
     assert p.from_pex == 6
     assert p.from_tracker == 7
 
+
 def test_group():
     data = {
         "name": "group",
@@ -653,7 +694,7 @@ def test_group():
         "speed-limit-down-enabled": True,
         "speed-limit-down": 100,
         "speed-limit-up-enabled": True,
-        "speed-limit-up": 100
+        "speed-limit-up": 100,
     }
     g = Group(fields=data)
     assert g.name == "group"
@@ -663,21 +704,21 @@ def test_group():
     assert g.speed_limit_up_enabled is True
     assert g.speed_limit_up == 100
 
+
 def test_port_test_result():
-    data = {
-        "port-is-open": True,
-        "ip_protocol": "ipv4"
-    }
+    data = {"port-is-open": True, "ip_protocol": "ipv4"}
     r = PortTestResult(fields=data)
     assert r.port_is_open is True
     assert r.ip_protocol == "ipv4"
+
 
 def test_bitmap():
     # 1000 0000 -> 128
     b = BitMap(b"\x80")
     assert b.get(0) is True
     assert b.get(1) is False
-    assert b.get(8) is False # Out of index
+    assert b.get(8) is False  # Out of index
+
 
 def test_session_properties():
     data = {
@@ -741,8 +782,8 @@ def test_session_properties():
             "size-units": ["b"],
             "size-bytes": 1,
             "memory-units": ["c"],
-            "memory-bytes": 1
-        }
+            "memory-bytes": 1,
+        },
     }
     s = Session(fields=data)
 
@@ -807,6 +848,7 @@ def test_session_properties():
     assert s.units.memory_units == ["c"]
     assert s.units.memory_bytes == 1
 
+
 def test_session_stats_properties():
     data = {
         "activeTorrentCount": 1,
@@ -819,15 +861,15 @@ def test_session_stats_properties():
             "filesAdded": 1,
             "secondsActive": 10,
             "sessionCount": 1,
-            "uploadedBytes": 500
+            "uploadedBytes": 500,
         },
         "current-stats": {
             "downloadedBytes": 100,
             "filesAdded": 0,
             "secondsActive": 5,
             "sessionCount": 1,
-            "uploadedBytes": 50
-        }
+            "uploadedBytes": 50,
+        },
     }
     s = SessionStats(fields=data)
     assert s.active_torrent_count == 1
@@ -843,6 +885,7 @@ def test_session_stats_properties():
     assert s.cumulative_stats.seconds_active == 10
 
     assert s.current_stats.downloaded_bytes == 100
+
 
 def test_torrent_properties():
     data = {
@@ -909,28 +952,9 @@ def test_torrent_properties():
         "uploadRatio": 1.0,
         "wanted": [1],
         "webseedsSendingToUs": 0,
-        "files": [
-            {
-                "name": "file1",
-                "bytesCompleted": 100,
-                "length": 1000
-            }
-        ],
-        "fileStats": [
-            {
-                "bytesCompleted": 100,
-                "wanted": True,
-                "priority": 1
-            }
-        ],
-        "trackers": [
-            {
-                "announce": "url",
-                "id": 1,
-                "scrape": "url",
-                "tier": 1
-            }
-        ],
+        "files": [{"name": "file1", "bytesCompleted": 100, "length": 1000}],
+        "fileStats": [{"bytesCompleted": 100, "wanted": True, "priority": 1}],
+        "trackers": [{"announce": "url", "id": 1, "scrape": "url", "tier": 1}],
         "trackerStats": [
             {
                 "announce": "url",
@@ -958,7 +982,7 @@ def test_torrent_properties():
                 "scrape": "url",
                 "scrapeState": 1,
                 "seederCount": 1,
-                "tier": 1
+                "tier": 1,
             }
         ],
         "peers": [
@@ -978,7 +1002,7 @@ def test_torrent_properties():
                 "port": 51413,
                 "progress": 0.5,
                 "rateToClient": 100,
-                "rateToPeer": 100
+                "rateToPeer": 100,
             }
         ],
         "pieces": "dGVzdA==",
@@ -992,8 +1016,8 @@ def test_torrent_properties():
             "fromLpd": 4,
             "fromLtep": 5,
             "fromPex": 6,
-            "fromTracker": 7
-        }
+            "fromTracker": 7,
+        },
     }
     t = Torrent(fields=data)
     assert t.id == 1
@@ -1077,25 +1101,14 @@ def test_torrent_properties():
     assert t.peers_from.from_pex == 6
     assert t.peers_from.from_tracker == 7
 
+
 def test_torrent_files():
     data = {
         "id": 1,
-        "files": [
-            {
-                "name": "file1",
-                "bytesCompleted": 100,
-                "length": 1000
-            }
-        ],
-        "fileStats": [
-            {
-                "bytesCompleted": 100,
-                "wanted": True,
-                "priority": 1
-            }
-        ],
+        "files": [{"name": "file1", "bytesCompleted": 100, "length": 1000}],
+        "fileStats": [{"bytesCompleted": 100, "wanted": True, "priority": 1}],
         "priorities": [1],
-        "wanted": [1]
+        "wanted": [1],
     }
     t = Torrent(fields=data)
     files = t.get_files()

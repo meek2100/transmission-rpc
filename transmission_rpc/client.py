@@ -8,7 +8,8 @@ import pathlib
 import string
 import time
 import types
-from typing import Any, BinaryIO, Iterable, List, TypeVar, Union
+from collections.abc import Iterable
+from typing import Any, BinaryIO, TypeVar, Union
 from urllib.parse import urlparse
 
 import certifi
@@ -39,7 +40,7 @@ __USER_AGENT__ = f"transmission-rpc/{__version__} (https://github.com/trim21/tra
 _hex_chars = frozenset(string.hexdigits.lower())
 
 _TorrentID = Union[int, str]
-_TorrentIDs = Union[_TorrentID, List[_TorrentID], None]
+_TorrentIDs = Union[_TorrentID, list[_TorrentID], None]
 
 _header_session_id_key = "x-transmission-session-id"
 

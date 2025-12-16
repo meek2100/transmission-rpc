@@ -35,8 +35,9 @@ from transmission_rpc.types import File
     ],
 )
 def test_client_parse_url(protocol: Literal["http", "https"], username, password, host, port, path):
-    with mock.patch("transmission_rpc.client.Client._request"), mock.patch(
-        "transmission_rpc.client.Client.get_session"
+    with (
+        mock.patch("transmission_rpc.client.Client._request"),
+        mock.patch("transmission_rpc.client.Client.get_session"),
     ):
         client = Client(
             protocol=protocol,
