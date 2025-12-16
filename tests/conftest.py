@@ -16,7 +16,14 @@ USER = os.getenv("TR_USER", "admin")
 PASSWORD = os.getenv("TR_PASSWORD", "password")
 
 
-def pytest_configure():
+@pytest.fixture(scope="session")
+def ensure_transmission_running():
+    """
+    Waits for the Transmission daemon to be available.
+
+    This fixture is session-scoped, so it runs once per test session,
+    but only if a test actually requests it (directly or indirectly).
+    """
     start = time.time()
     while True:
         with contextlib.suppress(ConnectionError, FileNotFoundError):
@@ -31,7 +38,13 @@ def pytest_configure():
 
 
 @pytest.fixture
-def tr_client():
+def tr_client(ensure_transmission_running):
+    """
+    Provides a Client instance connected to the Transmission daemon.
+
+    This fixture cleans up torrents before and after the test.
+    It depends on 'ensure_transmission_running' to ensure the daemon is reachable.
+    """
     LOGGER.setLevel("INFO")
     with Client(protocol=PROTOCOL, host=HOST, port=PORT, username=USER, password=PASSWORD) as c:
         for torrent in c.get_torrents():
