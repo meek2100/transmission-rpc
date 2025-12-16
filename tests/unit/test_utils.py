@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import datetime
+import io
 from typing import Any
 from unittest import mock
 
 import pytest
 
 from transmission_rpc import DEFAULT_TIMEOUT, from_url, utils
+from transmission_rpc.client import _parse_torrent_id, _parse_torrent_ids, _try_read_torrent
 from transmission_rpc.constants import LOGGER
 
 
@@ -135,3 +137,8 @@ def test_try_read_torrent_bytes():
 def test_try_read_torrent_url():
     assert _try_read_torrent("http://example.com/t.torrent") is None
     assert _try_read_torrent("magnet:?xt=urn:btih:hash") is None
+
+
+def test_try_read_torrent_file_url():
+    with pytest.raises(ValueError, match="support for `file://` URL has been removed"):
+        _try_read_torrent("file:///tmp/test")

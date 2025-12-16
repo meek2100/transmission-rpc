@@ -1,6 +1,7 @@
+from transmission_rpc.client import _parse_torrent_id, _parse_torrent_ids
 from transmission_rpc.constants import Priority
 from transmission_rpc.session import Session
-from transmission_rpc.torrent import Torrent
+from transmission_rpc.torrent import Status, Torrent
 
 
 def test_torrent_full_attributes():
@@ -39,18 +40,67 @@ def test_torrent_full_attributes():
         "totalSize": 1000,
         "uploadedEver": 100,
         "uploadRatio": 1.0,
+        "peersFrom": {
+            "fromCache": 1,
+            "fromDht": 2,
+            "fromIncoming": 3,
+            "fromLpd": 4,
+            "fromLtep": 5,
+            "fromPex": 6,
+            "fromTracker": 7,
+        },
         "files": [{"name": "f1", "bytesCompleted": 100, "length": 1000}],
         "fileStats": [{"bytesCompleted": 100, "wanted": True, "priority": 1}],
+        "trackers": [{"announce": "url", "id": 1, "scrape": "url", "tier": 1}],
+        "peers": [
+            {
+                "address": "1.2.3.4",
+                "clientName": "client",
+                "clientIsChoked": False,
+                "clientIsInterested": True,
+                "flagStr": "E",
+                "isDownloadingFrom": True,
+                "isEncrypted": True,
+                "isIncoming": False,
+                "isUploadingTo": False,
+                "isUTP": False,
+                "peerIsChoked": True,
+                "peerIsInterested": False,
+                "port": 51413,
+                "progress": 0.5,
+                "rateToClient": 100,
+                "rateToPeer": 100,
+            }
+        ],
     }
     t = Torrent(fields=data)
-    # Verification of all core calculated properties from the original 1125-line file
+    # Verification of all core calculated properties
     assert t.id == 1
     assert t.status == "stopped"
     assert t.priority == Priority.High
     assert t.progress == 100.0
     assert t.ratio == 1.0
-    assert len(t.get_files()) == 1
-    assert t.get_files()[0].name == "f1"
+
+    # Detailed verification of nested structures (previously in separate files)
+    files = t.get_files()
+    assert len(files) == 1
+    assert files[0].name == "f1"
+    assert files[0].completed == 100
+    assert files[0].size == 1000
+    assert files[0].selected is True
+    assert files[0].priority == Priority(1)
+
+    assert len(t.trackers) == 1
+    assert t.trackers[0].announce == "url"
+    assert t.trackers[0].tier == 1
+
+    assert len(t.peers) == 1
+    assert t.peers[0].address == "1.2.3.4"
+    assert t.peers[0].client_name == "client"
+    assert t.peers[0].rate_to_client == 100
+
+    assert t.peers_from.from_cache == 1
+    assert t.peers_from.from_dht == 2
 
 
 def test_session_full_attributes():

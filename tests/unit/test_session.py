@@ -39,11 +39,50 @@ def test_session_stats(client):
     assert stats.active_torrent_count == 1
 
 
+def test_session_stats_old(client):
+    """Test compatibility with older Transmission versions that wrap stats in 'session-stats' key."""
+    client._Client__http_client.request.return_value = mock.Mock(
+        status=200,
+        headers={},
+        data=json.dumps(
+            {
+                "result": "success",
+                "arguments": {
+                    "session-stats": {
+                        "activeTorrentCount": 1,
+                        "downloadSpeed": 1000,
+                        "cumulative-stats": {},
+                        "current-stats": {},
+                    }
+                },
+            }
+        ).encode(),
+    )
+    stats = client.session_stats()
+    assert stats.active_torrent_count == 1
+
+
 def test_set_session_all_args(client):
     client._Client__http_client.request.return_value = mock.Mock(
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     client.set_session(download_dir="/tmp/downloads", peer_limit_global=200)
+
+
+def test_set_session_encryption_invalid(client):
+    with pytest.raises(ValueError, match="Invalid encryption value"):
+        client.set_session(encryption="invalid")
+
+
+def test_set_session_warning(client):
+    client._Client__http_client.request.return_value = mock.Mock(
+        status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
+    )
+    # Mock older protocol version to trigger warning
+    client._Client__protocol_version = 14
+    with mock.patch.object(client.logger, "warning") as mock_warning:
+        client.set_session(default_trackers=["tracker"])
+        mock_warning.assert_called()
 
 
 def test_blocklist_update(client):
