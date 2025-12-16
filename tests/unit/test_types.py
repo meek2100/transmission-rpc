@@ -564,3 +564,27 @@ def test_status_properties():
     assert Status("seed pending").seed_pending is True
     assert Status("seeding").seeding is True
     assert str(Status("stopped")) == "stopped"
+
+
+def test_torrent_files_attributes():
+    """
+    Verify that get_files() correctly combines 'files' and 'fileStats'
+    into rich File objects with all attributes correctly mapped.
+    """
+    data = {
+        "id": 1,
+        "files": [{"name": "file1", "bytesCompleted": 100, "length": 1000}],
+        "fileStats": [{"bytesCompleted": 100, "wanted": True, "priority": 1}],
+        "priorities": [1],
+        "wanted": [1],
+    }
+    t = Torrent(fields=data)
+    files = t.get_files()
+
+    assert len(files) == 1
+    f = files[0]
+    assert f.name == "file1"
+    assert f.completed == 100
+    assert f.size == 1000
+    assert f.selected is True
+    assert f.priority == Priority(1)

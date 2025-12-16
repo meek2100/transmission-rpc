@@ -99,6 +99,11 @@ def test_parse_id_raise(arg):
         _parse_torrent_id(arg)
 
 
+def test_parse_id_negative():
+    with pytest.raises(ValueError, match="id must be greater than or equal to 0"):
+        _parse_torrent_id(-1)
+
+
 @pytest.mark.parametrize(
     ("arg", "expected"),
     [
