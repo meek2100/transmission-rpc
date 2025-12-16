@@ -119,6 +119,11 @@ def test_parse_torrent_ids_value_error(arg):
         _parse_torrent_ids(arg)
 
 
+def test_parse_torrent_ids_invalid_type():
+    with pytest.raises(ValueError, match="ids must be int, str, or list"):
+        _parse_torrent_ids(object())
+
+
 def test_try_read_torrent_path(tmp_path):
     p = tmp_path / "test.torrent"
     p.write_bytes(b"data")
