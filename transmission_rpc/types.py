@@ -16,6 +16,9 @@ class Container:
         """get the raw value by the **raw rpc response key**"""
         return self.fields.get(key, default)
 
+    def __repr__(self) -> str:
+        return f"<Container fields={self.fields!r}>"
+
 
 class File(NamedTuple):
     name: str

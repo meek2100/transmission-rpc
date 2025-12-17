@@ -58,7 +58,7 @@ def test_client_init_https(mock_http_client):
 
 
 def test_client_init_invalid_protocol():
-    with pytest.raises(ValueError, match="Invalid protocol"):
+    with pytest.raises(ValueError, match="Unknown protocol"):
         Client(protocol="ftp")
 
 
@@ -132,17 +132,17 @@ def test_context_manager(client):
 
 
 def test_deprecated_properties(client):
-    with pytest.warns(DeprecationWarning, match="url"):
+    with pytest.warns(DeprecationWarning, match="do not use internal property"):
         _ = client.url
-    with pytest.warns(DeprecationWarning, match="torrent_get_arguments"):
+    with pytest.warns(DeprecationWarning, match="do not use internal property"):
         _ = client.torrent_get_arguments
-    with pytest.warns(DeprecationWarning, match="session_id"):
+    with pytest.warns(DeprecationWarning, match="do not use internal property"):
         _ = client.session_id
-    with pytest.warns(DeprecationWarning, match="raw_session"):
+    with pytest.warns(DeprecationWarning, match="do not use internal property"):
         _ = client.raw_session
-    with pytest.warns(DeprecationWarning, match="server_version"):
+    with pytest.warns(DeprecationWarning, match="do not use internal property"):
         _ = client.server_version
-    with pytest.warns(DeprecationWarning, match="semver_version"):
+    with pytest.warns(DeprecationWarning, match="do not use internal property"):
         _ = client.semver_version
-    with pytest.warns(DeprecationWarning, match="rpc_version"):
+    with pytest.warns(DeprecationWarning, match="do not use internal property"):
         _ = client.rpc_version

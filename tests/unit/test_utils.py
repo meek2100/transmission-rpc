@@ -1,6 +1,3 @@
-# 2008-12, Erik Svensson <erik.public@gmail.com>
-# Copyright (c) 2018-2020 Trim21 <i@trim21.me>
-# Licensed under the MIT license.
 from __future__ import annotations
 
 import datetime
@@ -135,7 +132,7 @@ def test_parse_torrent_ids_value_error(arg):
 
 
 def test_parse_torrent_ids_invalid_type():
-    with pytest.raises(ValueError, match="ids must be int, str, or list"):
+    with pytest.raises(ValueError, match="Invalid torrent id"):
         _parse_torrent_ids(object())
 
 
