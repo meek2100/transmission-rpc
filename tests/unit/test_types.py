@@ -1,4 +1,3 @@
-import pytest
 from transmission_rpc.constants import Priority
 from transmission_rpc.session import Session, SessionStats
 from transmission_rpc.torrent import FileStat, PeersFrom, Status, Torrent, Tracker, TrackerStats
