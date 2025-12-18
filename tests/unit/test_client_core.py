@@ -140,9 +140,9 @@ def test_deprecated_properties(client):
         _ = client.session_id
     with pytest.warns(DeprecationWarning, match="do not use internal property"):
         _ = client.raw_session
-    with pytest.warns(DeprecationWarning, match="do not use internal property"):
+    with pytest.warns(DeprecationWarning, match=r"use `.get_session\(\).version` instead"):
         _ = client.server_version
-    with pytest.warns(DeprecationWarning, match="do not use internal property"):
+    with pytest.warns(DeprecationWarning, match=r"use .get_session\(\).rpc_version_semver instead"):
         _ = client.semver_version
-    with pytest.warns(DeprecationWarning, match="do not use internal property"):
+    with pytest.warns(DeprecationWarning, match=r"use .get_session\(\).rpc_version instead"):
         _ = client.rpc_version
