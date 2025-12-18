@@ -68,7 +68,7 @@ def ensure_location_str(s: str | pathlib.Path) -> str:
     return str(s)
 
 
-def _parse_torrent_id(raw_torrent_id: Any) -> int | str:
+def _parse_torrent_id(raw_torrent_id: int | str) -> int | str:
     if isinstance(raw_torrent_id, int):
         if raw_torrent_id >= 0:
             return raw_torrent_id
@@ -79,7 +79,7 @@ def _parse_torrent_id(raw_torrent_id: Any) -> int | str:
     raise ValueError(f"{raw_torrent_id} is not valid torrent id")
 
 
-def _parse_torrent_ids(args: Any) -> str | list[str | int]:
+def _parse_torrent_ids(args: int | str | list[int | str] | tuple[int | str, ...] | None) -> str | list[str | int]:
     if args is None:
         return []
     if isinstance(args, int):
