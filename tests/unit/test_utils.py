@@ -12,7 +12,7 @@ from transmission_rpc.client import _parse_torrent_id, _parse_torrent_ids, _try_
 from transmission_rpc.constants import LOGGER
 
 
-def assert_almost_eq(value: float, expected: float):
+def assert_almost_eq(value: float, expected: float) -> None:
     assert abs(value - expected) < 1
 
 
@@ -28,7 +28,7 @@ def assert_almost_eq(value: float, expected: float):
         datetime.timedelta(13, 65660): "13 18:14:20",
     }.items(),
 )
-def test_format_timedelta(delta, expected):
+def test_format_timedelta(delta: datetime.timedelta, expected: str) -> None:
     # Fixed: Changed comma to equality check
     assert utils.format_timedelta(delta) == expected
 
@@ -78,7 +78,7 @@ def test_format_timedelta(delta, expected):
         },
     }.items(),
 )
-def test_from_url(url: str, kwargs: dict[str, Any]):
+def test_from_url(url: str, kwargs: dict[str, Any]) -> None:
     with mock.patch("transmission_rpc.Client") as m:
         from_url(url)
         m.assert_called_once_with(
@@ -91,20 +91,20 @@ def test_from_url(url: str, kwargs: dict[str, Any]):
 example_hash = "51ba7d0dd45ab9b9564329c33f4f97493b677924"
 
 
-def test_parse_id_raise_float():
+def test_parse_id_raise_float() -> None:
     arg = float(1)
     with pytest.raises(ValueError, match=f"{arg} is not valid torrent id"):
-        _parse_torrent_id(arg)
+        _parse_torrent_id(arg)  # type: ignore[arg-type]
 
 
-def test_parse_id_raise_string():
+def test_parse_id_raise_string() -> None:
     arg = "non-hash-string"
     # Updated match to match the specific string error from client.py
     with pytest.raises(ValueError, match="is not valid torrent id"):
         _parse_torrent_id(arg)
 
 
-def test_parse_id_negative():
+def test_parse_id_negative() -> None:
     # Updated match to accept the generic error message for negative numbers
     with pytest.raises(ValueError, match="is not valid torrent id"):
         _parse_torrent_id(-1)
@@ -120,41 +120,41 @@ def test_parse_id_negative():
         (None, []),
     ],
 )
-def test_parse_torrent_ids(arg, expected):
-    assert _parse_torrent_ids(arg) == expected, f"parse_torrent_ids({arg}) != {expected}"
+def test_parse_torrent_ids(arg: Any, expected: Any) -> None:
+    assert _parse_torrent_ids(arg) == expected, f"parse_torrent_ids({arg}) != {expected}"  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("arg", ["not-recently-active", "non-hash-string", -1, 1.1, "5:10", "5,6,8,9,10"])
-def test_parse_torrent_ids_value_error(arg):
+def test_parse_torrent_ids_value_error(arg: Any) -> None:
     with pytest.raises(ValueError, match="torrent id"):
-        _parse_torrent_ids(arg)
+        _parse_torrent_ids(arg)  # type: ignore[arg-type]
 
 
-def test_parse_torrent_ids_invalid_type():
+def test_parse_torrent_ids_invalid_type() -> None:
     with pytest.raises(ValueError, match="Invalid torrent id"):
-        _parse_torrent_ids(object())
+        _parse_torrent_ids(object())  # type: ignore[arg-type]
 
 
-def test_try_read_torrent_path(tmp_path):
+def test_try_read_torrent_path(tmp_path: Any) -> None:
     p = tmp_path / "test.torrent"
     p.write_bytes(b"data")
     assert _try_read_torrent(p) == "ZGF0YQ=="
 
 
-def test_try_read_torrent_file_obj():
+def test_try_read_torrent_file_obj() -> None:
     f = io.BytesIO(b"data")
     assert _try_read_torrent(f) == "ZGF0YQ=="
 
 
-def test_try_read_torrent_bytes():
+def test_try_read_torrent_bytes() -> None:
     assert _try_read_torrent(b"data") == "ZGF0YQ=="
 
 
-def test_try_read_torrent_url():
+def test_try_read_torrent_url() -> None:
     assert _try_read_torrent("http://example.com/t.torrent") is None
     assert _try_read_torrent("magnet:?xt=urn:btih:hash") is None
 
 
-def test_try_read_torrent_file_url():
+def test_try_read_torrent_file_url() -> None:
     with pytest.raises(ValueError, match="support for `file://` URL has been removed"):
         _try_read_torrent("file:///tmp/test")

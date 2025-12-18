@@ -3,8 +3,11 @@ import os
 import secrets
 import socket
 import time
+from collections.abc import Generator
+from typing import Callable
 
 import pytest
+from typing_extensions import Literal
 
 from transmission_rpc import LOGGER
 from transmission_rpc.client import Client
@@ -17,7 +20,7 @@ PASSWORD = os.getenv("TR_PASSWORD", "password")
 
 
 @pytest.fixture(scope="session")
-def ensure_transmission_running():
+def ensure_transmission_running() -> None:
     """
     Waits for the Transmission daemon to be available.
 
@@ -38,7 +41,7 @@ def ensure_transmission_running():
 
 
 @pytest.fixture
-def tr_client(ensure_transmission_running):
+def tr_client(ensure_transmission_running: None) -> Generator[Client, None, None]:
     """
     Provides a Client instance connected to the Transmission daemon.
 
@@ -46,7 +49,9 @@ def tr_client(ensure_transmission_running):
     It depends on 'ensure_transmission_running' to ensure the daemon is reachable.
     """
     LOGGER.setLevel("INFO")
-    with Client(protocol=PROTOCOL, host=HOST, port=PORT, username=USER, password=PASSWORD) as c:
+    # Cast PROTOCOL to the Literal type expected by Client
+    protocol_arg: Literal["http", "https", "http+unix"] = PROTOCOL  # type: ignore[assignment]
+    with Client(protocol=protocol_arg, host=HOST, port=PORT, username=USER, password=PASSWORD) as c:
         for torrent in c.get_torrents():
             c.remove_torrent(torrent.id, delete_data=True)
         yield c
@@ -55,5 +60,5 @@ def tr_client(ensure_transmission_running):
 
 
 @pytest.fixture
-def fake_hash_factory():
+def fake_hash_factory() -> Callable[[], str]:
     return lambda: secrets.token_hex(20)

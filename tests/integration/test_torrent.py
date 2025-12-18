@@ -10,18 +10,18 @@ import transmission_rpc.utils
 from transmission_rpc.torrent import Status
 
 
-def test_initial():
+def test_initial() -> None:
     with pytest.raises(ValueError, match="Torrent object requires field 'id'"):
         transmission_rpc.Torrent(fields={})
     transmission_rpc.Torrent(fields={"id": 42})
 
 
-def assert_property_exception(exception, ob, prop):
+def assert_property_exception(exception: type[Exception], ob: object, prop: str) -> None:
     with pytest.raises(exception):
         getattr(ob, prop)
 
 
-def test_non_active():
+def test_non_active() -> None:
     data = {
         "id": 1,
         "activityDate": 0,
@@ -31,7 +31,7 @@ def test_non_active():
     assert torrent.activity_date
 
 
-def test_attributes():
+def test_attributes() -> None:
     torrent = transmission_rpc.Torrent(fields={"id": 42})
     assert torrent.id == 42
     assert_property_exception(KeyError, torrent, "status")
@@ -68,7 +68,7 @@ def test_attributes():
     assert torrent.id == 1
     assert torrent.left_until_done == 500
     assert torrent.status == "downloading"
-    assert torrent.status.downloading
+    assert torrent.status.downloading  # type: ignore[attr-defined]
     assert torrent.progress == 50.0
     assert torrent.ratio == 0.5
     assert torrent.eta == datetime.timedelta(seconds=3600)
@@ -79,7 +79,7 @@ def test_attributes():
 
     assert torrent.format_eta() == transmission_rpc.utils.format_timedelta(torrent.eta)
 
-    data = {
+    data2 = {
         "id": 1,
         "status": 4,
         "sizeWhenDone": 1000,
@@ -94,11 +94,11 @@ def test_attributes():
         "doneDate": 0,
     }
 
-    torrent = transmission_rpc.Torrent(fields=data)
-    assert torrent.done_date is None
+    torrent2 = transmission_rpc.Torrent(fields=data2)
+    assert torrent2.done_date is None
 
 
-def test_status():
+def test_status() -> None:
     assert Status("downloading").downloading
     assert not Status("downloading").download_pending
     assert Status("download pending").download_pending
