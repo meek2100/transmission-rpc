@@ -8,7 +8,7 @@ version = "8.0.0a4"
 description = "Python module that implements the Transmission bittorent client JSON-RPC protocol"
 authors = [{ name = "trim21", email = "trim21me@gmail.com" }]
 readme = 'README.md'
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = { text = 'MIT' }
 keywords = ['transmission', 'rpc']
 classifiers = [
@@ -16,19 +16,19 @@ classifiers = [
     'Development Status :: 4 - Beta',
     'License :: OSI Approved :: MIT License',
     'Programming Language :: Python :: 3 :: Only',
-    'Programming Language :: Python :: 3.8',
     'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
     'Programming Language :: Python :: 3.13',
+    'Programming Language :: Python :: 3.14',
     'Programming Language :: Python :: Implementation :: CPython',
     'Programming Language :: Python :: Implementation :: PyPy',
 ]
 dependencies = [
-    'urllib3~=2.2',
+    'urllib3>=2.3.0',
     'certifi>=2017.4.17',
-    'typing-extensions>=4.5.0',
+    'typing-extensions>=4.12.2',
 ]
 
 [project.urls]
@@ -53,10 +53,10 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-addopts = '-rav -Werror'
+addopts = "-rav -Werror"
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 strict = true
 disallow_untyped_defs = true
 ignore_missing_imports = true
@@ -65,13 +65,14 @@ warn_unused_configs = true
 show_error_codes = true
 warn_unused_ignores = false
 platform = "linux"
+exclude = ["docs/"]
 
 [tool.black]
 line-length = 120
-target-version = ['py38']
+target-version = ['py39']
 
 [tool.ruff]
-target-version = "py38"
+target-version = "py39"
 extend-exclude = ["docs"]
 line-length = 120
 
@@ -110,7 +111,7 @@ select = [
     "YTT",
     "UP",
     "FA100",
-    "FA102"
+    "FA102",
 ]
 extend-fixable = ['UP']
 ignore = [
@@ -151,7 +152,7 @@ ignore = [
 root = '.'
 include = ['./transmission_rpc/']
 ignore = ['./tests/', './docs/']
-pythonVersion = '3.8'
+pythonVersion = '3.9'
 pythonPlatform = 'Linux'
 typeCheckingMode = "strict"
 # reportUnnecessaryComparison = false

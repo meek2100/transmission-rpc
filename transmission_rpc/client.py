@@ -8,7 +8,8 @@ import pathlib
 import string
 import time
 import types
-from typing import Any, BinaryIO, Iterable, List, TypeVar, Union
+from collections.abc import Iterable
+from typing import Any, BinaryIO, TypeVar, Union
 from urllib.parse import urlparse
 
 import certifi
@@ -39,7 +40,7 @@ __USER_AGENT__ = f"transmission-rpc/{__version__} (https://github.com/trim21/tra
 _hex_chars = frozenset(string.hexdigits.lower())
 
 _TorrentID = Union[int, str]
-_TorrentIDs = Union[_TorrentID, List[_TorrentID], None]
+_TorrentIDs = Union[_TorrentID, list[_TorrentID], None]
 
 _header_session_id_key = "x-transmission-session-id"
 
@@ -50,7 +51,7 @@ _Timeout = Union[Timeout, int, float]
 
 
 class ResponseData(TypedDict):
-    arguments: Any
+    arguments: dict[str, Any]
     tag: int
     result: str
 
@@ -67,7 +68,7 @@ def ensure_location_str(s: str | pathlib.Path) -> str:
     return str(s)
 
 
-def _parse_torrent_id(raw_torrent_id: Any) -> int | str:
+def _parse_torrent_id(raw_torrent_id: int | str) -> int | str:
     if isinstance(raw_torrent_id, int):
         if raw_torrent_id >= 0:
             return raw_torrent_id
@@ -78,7 +79,7 @@ def _parse_torrent_id(raw_torrent_id: Any) -> int | str:
     raise ValueError(f"{raw_torrent_id} is not valid torrent id")
 
 
-def _parse_torrent_ids(args: Any) -> str | list[str | int]:
+def _parse_torrent_ids(args: int | str | list[int | str] | tuple[int | str, ...] | None) -> str | list[str | int]:
     if args is None:
         return []
     if isinstance(args, int):
