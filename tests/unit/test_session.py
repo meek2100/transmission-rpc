@@ -20,7 +20,7 @@ def client() -> Client:
 
 
 def test_session_stats(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
         headers={},
         data=json.dumps(
@@ -41,7 +41,7 @@ def test_session_stats(client: Client) -> None:
 
 def test_session_stats_old(client: Client) -> None:
     """Test compatibility with older Transmission versions that wrap stats in 'session-stats' key."""
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
         headers={},
         data=json.dumps(
@@ -63,7 +63,7 @@ def test_session_stats_old(client: Client) -> None:
 
 
 def test_set_session_all_args(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
 
@@ -82,13 +82,13 @@ def test_set_session_all_args(client: Client) -> None:
         cache_size_mb=10,
         dht_enabled=True,
         default_trackers=["http://tracker.com"],
-        download_dir="/tmp/downloads",
+        download_dir="/tmp/downloads",  # noqa: S108
         download_queue_enabled=True,
         download_queue_size=5,
         encryption="preferred",
         idle_seeding_limit=30,
         idle_seeding_limit_enabled=True,
-        incomplete_dir="/tmp/incomplete",
+        incomplete_dir="/tmp/incomplete",  # noqa: S108
         incomplete_dir_enabled=True,
         lpd_enabled=True,
         peer_limit_global=200,
@@ -123,13 +123,13 @@ def test_set_session_all_args(client: Client) -> None:
 
     # Verify the arguments sent to the RPC
     # This ensures that no arguments were dropped during the dictionary construction in client.py
-    assert client._Client__http_client.request.called  # type: ignore[attr-defined]
-    _, kwargs = client._Client__http_client.request.call_args  # type: ignore[attr-defined]
+    assert client._Client__http_client.request.called  # type: ignore[attr-defined] # noqa: SLF001
+    _, kwargs = client._Client__http_client.request.call_args  # type: ignore[attr-defined] # noqa: SLF001
     sent_args = kwargs["json"]["arguments"]
 
     # Verify a sampling of mapping logic to ensure keys are transformed correctly (e.g., underscores to hyphens)
     assert sent_args["alt-speed-down"] == 100
-    assert sent_args["download-dir"] == "/tmp/downloads"
+    assert sent_args["download-dir"] == "/tmp/downloads"  # noqa: S108
     assert sent_args["encryption"] == "preferred"
     # 'default_trackers' list should be joined by newlines in the payload
     assert sent_args["default-trackers"] == "http://tracker.com"
@@ -143,18 +143,18 @@ def test_set_session_encryption_invalid(client: Client) -> None:
 
 
 def test_set_session_warning(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     # Mock older protocol version to trigger warning
-    client._Client__protocol_version = 14  # type: ignore[attr-defined]
+    client._Client__protocol_version = 14  # type: ignore[attr-defined] # noqa: SLF001
     with mock.patch.object(client.logger, "warning") as mock_warning:
         client.set_session(default_trackers=["tracker"])
         mock_warning.assert_called()
 
 
 def test_blocklist_update(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"blocklist-size": 10}}).encode()
     )
     assert client.blocklist_update() == 10
