@@ -20,7 +20,7 @@ def client() -> Client:
 
 
 def test_add_torrent_file(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
         headers={},
         data=json.dumps(
@@ -33,7 +33,7 @@ def test_add_torrent_file(client: Client) -> None:
 
 
 def test_add_torrent_duplicate(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
         headers={},
         data=json.dumps(
@@ -45,7 +45,7 @@ def test_add_torrent_duplicate(client: Client) -> None:
 
 
 def test_add_torrent_kwargs(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
         headers={},
         data=json.dumps(
@@ -56,7 +56,7 @@ def test_add_torrent_kwargs(client: Client) -> None:
 
 
 def test_add_torrent_invalid_response(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     with pytest.raises(TransmissionError, match="Invalid torrent-add response"):
@@ -64,7 +64,7 @@ def test_add_torrent_invalid_response(client: Client) -> None:
 
 
 def test_get_torrent_not_found(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"torrents": []}}).encode()
     )
     with pytest.raises(KeyError, match="Torrent not found in result"):
@@ -77,7 +77,7 @@ def test_change_torrent_empty(client: Client) -> None:
 
 
 def test_rename_torrent_path(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
         headers={},
         data=json.dumps({"result": "success", "arguments": {"path": "/new/path", "name": "new_name"}}).encode(),
@@ -86,21 +86,21 @@ def test_rename_torrent_path(client: Client) -> None:
 
 
 def test_move_torrent_data(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     client.move_torrent_data(1, "/new/path")
 
 
 def test_start_torrent_bypass(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     client.start_torrent(1, bypass_queue=True)
 
 
 def test_start_all(client: Client) -> None:
-    client._Client__http_client.request.side_effect = [  # type: ignore[attr-defined]
+    client._Client__http_client.request.side_effect = [  # type: ignore[attr-defined] # noqa: SLF001
         mock.Mock(
             status=200,
             headers={},
@@ -117,7 +117,7 @@ def test_start_all(client: Client) -> None:
 
 
 def test_get_recently_active_torrents(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
         headers={},
         data=json.dumps(
@@ -133,14 +133,14 @@ def test_get_recently_active_torrents(client: Client) -> None:
 
 
 def test_port_test(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"port-is-open": True}}).encode()
     )
     assert client.port_test().port_is_open
 
 
 def test_free_space_success(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
         headers={},
         data=json.dumps({"result": "success", "arguments": {"path": "/data", "size-bytes": 100}}).encode(),
@@ -149,7 +149,7 @@ def test_free_space_success(client: Client) -> None:
 
 
 def test_free_space_fail(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
         headers={},
         data=json.dumps({"result": "success", "arguments": {"path": "/other", "size-bytes": 100}}).encode(),
@@ -158,7 +158,7 @@ def test_free_space_fail(client: Client) -> None:
 
 
 def test_get_group(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
         headers={},
         data=json.dumps({"result": "success", "arguments": {"group": [{"name": "test"}]}}).encode(),
@@ -167,14 +167,14 @@ def test_get_group(client: Client) -> None:
 
 
 def test_get_group_none(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"group": []}}).encode()
     )
     assert client.get_group("test") is None
 
 
 def test_get_groups(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
         headers={},
         data=json.dumps({"result": "success", "arguments": {"group": [{"name": "test"}]}}).encode(),
@@ -207,7 +207,7 @@ def test_ensure_location_str_pathlib_relative() -> None:
 )
 def test_void_methods(client: Client, method: str, args: list[object]) -> None:
     """Parametrized test for methods that perform an action and return success with no data."""
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     getattr(client, method)(*args)

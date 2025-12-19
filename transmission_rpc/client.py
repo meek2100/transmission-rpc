@@ -51,7 +51,7 @@ _Timeout = Union[Timeout, int, float]
 
 
 class ResponseData(TypedDict):
-    arguments: Any
+    arguments: dict[str, Any]
     tag: int
     result: str
 

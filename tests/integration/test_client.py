@@ -58,7 +58,7 @@ def test_client_parse_url(
             path=path,
         )
 
-        assert client._url == f"{protocol}://{host}:{port}{urljoin(path, 'rpc')}"
+        assert client._url == f"{protocol}://{host}:{port}{urljoin(path, 'rpc')}"  # noqa: SLF001
 
 
 def hash_to_magnet(h: str) -> str:
