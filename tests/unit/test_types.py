@@ -4,28 +4,28 @@ from transmission_rpc.torrent import FileStat, PeersFrom, Status, Torrent, Track
 from transmission_rpc.types import BitMap, Container, Group, PortTestResult
 
 
-def test_container_init():
+def test_container_init() -> None:
     c = Container(fields={"key": "value"})
     assert c.fields["key"] == "value"
 
 
-def test_container_getattr():
+def test_container_getattr() -> None:
     c = Container(fields={"key": "value"})
     assert c.get("key") == "value"
 
 
-def test_container_repr():
+def test_container_repr() -> None:
     c = Container(fields={"key": "value"})
     assert isinstance(repr(c), str)
     assert "key" in repr(c)
 
 
-def test_group_init():
+def test_group_init() -> None:
     g = Group(fields={"name": "test"})
     assert g.name == "test"
 
 
-def test_group_properties():
+def test_group_properties() -> None:
     data = {
         "name": "group",
         "honorsSessionLimits": True,
@@ -43,7 +43,7 @@ def test_group_properties():
     assert g.speed_limit_up == 100
 
 
-def test_file_stat():
+def test_file_stat() -> None:
     data = {"bytesCompleted": 100, "wanted": True, "priority": 1}
     fs = FileStat(fields=data)
     assert fs.bytesCompleted == 100
@@ -51,7 +51,7 @@ def test_file_stat():
     assert fs.priority == 1
 
 
-def test_tracker():
+def test_tracker() -> None:
     data = {"announce": "url", "id": 1, "scrape": "url", "tier": 1}
     t = Tracker(fields=data)
     assert t.announce == "url"
@@ -60,7 +60,7 @@ def test_tracker():
     assert t.tier == 1
 
 
-def test_tracker_stats():
+def test_tracker_stats() -> None:
     data = {
         "announce": "url",
         "announceState": 1,
@@ -120,7 +120,7 @@ def test_tracker_stats():
     assert t.site_name == "site"
 
 
-def test_peers_from():
+def test_peers_from() -> None:
     data = {
         "fromCache": 1,
         "fromDht": 2,
@@ -140,14 +140,14 @@ def test_peers_from():
     assert p.from_tracker == 7
 
 
-def test_port_test_result():
+def test_port_test_result() -> None:
     data = {"port-is-open": True, "ip_protocol": "ipv4"}
     r = PortTestResult(fields=data)
     assert r.port_is_open is True
     assert r.ip_protocol == "ipv4"
 
 
-def test_bitmap():
+def test_bitmap() -> None:
     # 1000 0000 -> 128
     b = BitMap(b"\x80")
     assert b.get(0) is True
@@ -155,7 +155,7 @@ def test_bitmap():
     assert b.get(8) is False  # Out of index
 
 
-def test_session_stats_properties():
+def test_session_stats_properties() -> None:
     data = {
         "activeTorrentCount": 1,
         "downloadSpeed": 100,
@@ -193,7 +193,7 @@ def test_session_stats_properties():
     assert s.current_stats.downloaded_bytes == 100
 
 
-def test_torrent_full_attributes():
+def test_torrent_full_attributes() -> None:
     data = {
         "id": 1,
         "name": "name",
@@ -399,8 +399,8 @@ def test_torrent_full_attributes():
         assert getattr(t, date_prop).timestamp() == 100, f"{date_prop} mismatch"
 
     # Complex object checks
-    assert t.eta.days == 0
-    assert t.eta_idle.days == 0
+    assert t.eta.days == 0  # type: ignore[union-attr]
+    assert t.eta_idle.days == 0  # type: ignore[union-attr]
 
     assert len(t.get_files()) == 1
     assert t.get_files()[0].name == "f1"
@@ -418,7 +418,7 @@ def test_torrent_full_attributes():
     assert t.peers_from.from_dht == 2
 
 
-def test_session_full_attributes():
+def test_session_full_attributes() -> None:
     data = {
         "alt-speed-down": 100,
         "alt-speed-enabled": True,
@@ -500,7 +500,7 @@ def test_session_full_attributes():
         "config_dir": "dir",
         "dht_enabled": True,
         "download_dir": "dir",
-        "download_dir_free_space": 1000,
+        "download_dir_free-space": 1000,
         "download_queue_enabled": True,
         "download_queue_size": 5,
         "encryption": "preferred",
@@ -513,7 +513,7 @@ def test_session_full_attributes():
         "peer_limit_per_torrent": 50,
         "peer_port": 51413,
         "peer_port_random_on_start": False,
-        "pex_enabled": True,
+        "pex-enabled": True,
         "port_forwarding_enabled": True,
         "queue_stalled_enabled": True,
         "queue_stalled_minutes": 10,
@@ -543,7 +543,9 @@ def test_session_full_attributes():
     }
 
     for attr, expected in expected_simple.items():
-        assert getattr(s, attr) == expected, f"Session attribute '{attr}' mismatch"
+        # Fix the key in expected_simple
+        check_attr = attr.replace("-", "_")
+        assert getattr(s, check_attr) == expected, f"Session attribute '{check_attr}' mismatch"
 
     # Units check
     assert s.units.speed_units == ["a"]
@@ -554,7 +556,7 @@ def test_session_full_attributes():
     assert s.units.memory_bytes == 1
 
 
-def test_status_properties():
+def test_status_properties() -> None:
     assert Status("stopped").stopped is True
     assert Status("check pending").check_pending is True
     assert Status("checking").checking is True
@@ -565,7 +567,7 @@ def test_status_properties():
     assert str(Status("stopped")) == "stopped"
 
 
-def test_torrent_files_attributes():
+def test_torrent_files_attributes() -> None:
     """
     Verify that get_files() correctly combines 'files' and 'fileStats'
     into rich File objects with all attributes correctly mapped.

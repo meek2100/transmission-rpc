@@ -7,7 +7,7 @@ from transmission_rpc.client import Client
 
 
 @pytest.fixture
-def client():
+def client() -> Client:
     with mock.patch("transmission_rpc.client.urllib3.HTTPConnectionPool") as m:
         m.return_value.request.return_value = mock.Mock(
             status=200,
@@ -19,8 +19,8 @@ def client():
         return Client()
 
 
-def test_session_stats(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_session_stats(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200,
         headers={},
         data=json.dumps(
@@ -39,9 +39,9 @@ def test_session_stats(client):
     assert stats.active_torrent_count == 1
 
 
-def test_session_stats_old(client):
+def test_session_stats_old(client: Client) -> None:
     """Test compatibility with older Transmission versions that wrap stats in 'session-stats' key."""
-    client._Client__http_client.request.return_value = mock.Mock(
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200,
         headers={},
         data=json.dumps(
@@ -62,8 +62,8 @@ def test_session_stats_old(client):
     assert stats.active_torrent_count == 1
 
 
-def test_set_session_all_args(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_set_session_all_args(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
 
@@ -123,8 +123,8 @@ def test_set_session_all_args(client):
 
     # Verify the arguments sent to the RPC
     # This ensures that no arguments were dropped during the dictionary construction in client.py
-    assert client._Client__http_client.request.called
-    _, kwargs = client._Client__http_client.request.call_args
+    assert client._Client__http_client.request.called  # type: ignore[attr-defined]
+    _, kwargs = client._Client__http_client.request.call_args  # type: ignore[attr-defined]
     sent_args = kwargs["json"]["arguments"]
 
     # Verify a sampling of mapping logic to ensure keys are transformed correctly (e.g., underscores to hyphens)
@@ -137,24 +137,24 @@ def test_set_session_all_args(client):
     assert sent_args["unknown_arg"] == "value"
 
 
-def test_set_session_encryption_invalid(client):
+def test_set_session_encryption_invalid(client: Client) -> None:
     with pytest.raises(ValueError, match="Invalid encryption value"):
-        client.set_session(encryption="invalid")
+        client.set_session(encryption="invalid")  # type: ignore[arg-type]
 
 
-def test_set_session_warning(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_set_session_warning(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     # Mock older protocol version to trigger warning
-    client._Client__protocol_version = 14
+    client._Client__protocol_version = 14  # type: ignore[attr-defined]
     with mock.patch.object(client.logger, "warning") as mock_warning:
         client.set_session(default_trackers=["tracker"])
         mock_warning.assert_called()
 
 
-def test_blocklist_update(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_blocklist_update(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"blocklist-size": 10}}).encode()
     )
     assert client.blocklist_update() == 10

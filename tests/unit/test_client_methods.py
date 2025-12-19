@@ -9,7 +9,7 @@ from transmission_rpc.error import TransmissionError
 
 
 @pytest.fixture
-def client():
+def client() -> Client:
     with mock.patch("transmission_rpc.client.urllib3.HTTPConnectionPool") as m:
         m.return_value.request.return_value = mock.Mock(
             status=200,
@@ -19,8 +19,8 @@ def client():
         return Client()
 
 
-def test_add_torrent_file(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_add_torrent_file(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200,
         headers={},
         data=json.dumps(
@@ -32,8 +32,8 @@ def test_add_torrent_file(client):
         assert torrent.id == 1
 
 
-def test_add_torrent_duplicate(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_add_torrent_duplicate(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200,
         headers={},
         data=json.dumps(
@@ -44,8 +44,8 @@ def test_add_torrent_duplicate(client):
     assert torrent.id == 1
 
 
-def test_add_torrent_kwargs(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_add_torrent_kwargs(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200,
         headers={},
         data=json.dumps(
@@ -55,29 +55,29 @@ def test_add_torrent_kwargs(client):
     client.add_torrent("magnet:?xt=urn:btih:hash", labels=["l1"], sequential_download=True)
 
 
-def test_add_torrent_invalid_response(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_add_torrent_invalid_response(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     with pytest.raises(TransmissionError, match="Invalid torrent-add response"):
         client.add_torrent(b"data")
 
 
-def test_get_torrent_not_found(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_get_torrent_not_found(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"torrents": []}}).encode()
     )
     with pytest.raises(KeyError, match="Torrent not found in result"):
         client.get_torrent(1)
 
 
-def test_change_torrent_empty(client):
+def test_change_torrent_empty(client: Client) -> None:
     with pytest.raises(ValueError, match="No arguments to set"):
         client.change_torrent(1)
 
 
-def test_rename_torrent_path(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_rename_torrent_path(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200,
         headers={},
         data=json.dumps({"result": "success", "arguments": {"path": "/new/path", "name": "new_name"}}).encode(),
@@ -85,22 +85,22 @@ def test_rename_torrent_path(client):
     assert client.rename_torrent_path(1, "/old/path", "new_name") == ("/new/path", "new_name")
 
 
-def test_move_torrent_data(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_move_torrent_data(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     client.move_torrent_data(1, "/new/path")
 
 
-def test_start_torrent_bypass(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_start_torrent_bypass(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     client.start_torrent(1, bypass_queue=True)
 
 
-def test_start_all(client):
-    client._Client__http_client.request.side_effect = [
+def test_start_all(client: Client) -> None:
+    client._Client__http_client.request.side_effect = [  # type: ignore[attr-defined]
         mock.Mock(
             status=200,
             headers={},
@@ -116,8 +116,8 @@ def test_start_all(client):
     client.start_all()
 
 
-def test_get_recently_active_torrents(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_get_recently_active_torrents(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200,
         headers={},
         data=json.dumps(
@@ -132,15 +132,15 @@ def test_get_recently_active_torrents(client):
     assert removed == [2]
 
 
-def test_port_test(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_port_test(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"port-is-open": True}}).encode()
     )
     assert client.port_test().port_is_open
 
 
-def test_free_space_success(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_free_space_success(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200,
         headers={},
         data=json.dumps({"result": "success", "arguments": {"path": "/data", "size-bytes": 100}}).encode(),
@@ -148,8 +148,8 @@ def test_free_space_success(client):
     assert client.free_space("/data") == 100
 
 
-def test_free_space_fail(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_free_space_fail(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200,
         headers={},
         data=json.dumps({"result": "success", "arguments": {"path": "/other", "size-bytes": 100}}).encode(),
@@ -157,24 +157,24 @@ def test_free_space_fail(client):
     assert client.free_space("/data") is None
 
 
-def test_get_group(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_get_group(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200,
         headers={},
         data=json.dumps({"result": "success", "arguments": {"group": [{"name": "test"}]}}).encode(),
     )
-    assert client.get_group("test").name == "test"
+    assert client.get_group("test").name == "test"  # type: ignore[union-attr]
 
 
-def test_get_group_none(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_get_group_none(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"group": []}}).encode()
     )
     assert client.get_group("test") is None
 
 
-def test_get_groups(client):
-    client._Client__http_client.request.return_value = mock.Mock(
+def test_get_groups(client: Client) -> None:
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200,
         headers={},
         data=json.dumps({"result": "success", "arguments": {"group": [{"name": "test"}]}}).encode(),
@@ -183,7 +183,7 @@ def test_get_groups(client):
     assert "test" in groups
 
 
-def test_ensure_location_str_pathlib_relative():
+def test_ensure_location_str_pathlib_relative() -> None:
     # RUF043: Added raw string prefix 'r' to match pattern
     with pytest.raises(ValueError, match=r"using relative `pathlib.Path` as remote path is not supported"):
         ensure_location_str(pathlib.Path("relative"))
@@ -205,9 +205,9 @@ def test_ensure_location_str_pathlib_relative():
         ("remove_torrent", [1]),
     ],
 )
-def test_void_methods(client, method, args):
+def test_void_methods(client: Client, method: str, args: list[object]) -> None:
     """Parametrized test for methods that perform an action and return success with no data."""
-    client._Client__http_client.request.return_value = mock.Mock(
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     getattr(client, method)(*args)

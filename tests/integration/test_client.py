@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import base64
 import pathlib
 import time
+from typing import Callable
 from unittest import mock
 from urllib.parse import urljoin
 
@@ -34,7 +37,14 @@ from transmission_rpc.types import File
         ),
     ],
 )
-def test_client_parse_url(protocol: Literal["http", "https"], username, password, host, port, path):
+def test_client_parse_url(
+    protocol: Literal["http", "https"],
+    username: str | None,
+    password: str | None,
+    host: str,
+    port: int,
+    path: str,
+) -> None:
     with (
         mock.patch("transmission_rpc.client.Client._request"),
         mock.patch("transmission_rpc.client.Client.get_session"),
@@ -51,7 +61,7 @@ def test_client_parse_url(protocol: Literal["http", "https"], username, password
         assert client._url == f"{protocol}://{host}:{port}{urljoin(path, 'rpc')}"
 
 
-def hash_to_magnet(h):
+def hash_to_magnet(h: str) -> str:
     return f"magnet:?xt=urn:btih:{h}"
 
 
@@ -61,7 +71,7 @@ torrent_hash2 = "9fc20b9e98ea98b4a35e6223041a5ef94ea27809"
 torrent_url = "https://github.com/trim21/transmission-rpc/raw/v4.1.0/tests/fixtures/iso.torrent"
 
 
-def test_client_add_kwargs():
+def test_client_add_kwargs() -> None:
     m = mock.Mock(return_value={"hello": "workd"})
     with mock.patch("transmission_rpc.client.Client._request", m):
         with mock.patch("transmission_rpc.client.Client.get_session"):
@@ -98,21 +108,21 @@ def test_client_add_kwargs():
         )
 
 
-def test_client_add_url():
+def test_client_add_url() -> None:
     assert _try_read_torrent(torrent_url) is None, "handle http URL with daemon"
 
 
-def test_client_add_magnet():
+def test_client_add_magnet() -> None:
     assert _try_read_torrent(magnet_url) is None, "handle magnet URL with daemon"
 
 
-def test_client_add_pathlib_path():
+def test_client_add_pathlib_path() -> None:
     p = pathlib.Path("tests/fixtures/iso.torrent")
     b64 = base64.b64encode(p.read_bytes()).decode()
     assert _try_read_torrent(p) == b64, "should skip handle base64 content"
 
 
-def test_client_add_read_file_in_base64():
+def test_client_add_read_file_in_base64() -> None:
     with open("tests/fixtures/iso.torrent", "rb") as f:
         content = f.read()
         f.seek(0)
@@ -121,30 +131,30 @@ def test_client_add_read_file_in_base64():
     assert base64.b64encode(content).decode() == data, "should base64 encode torrent file"
 
 
-def test_client_add_torrent_bytes():
+def test_client_add_torrent_bytes() -> None:
     with open("tests/fixtures/iso.torrent", "rb") as f:
         content = f.read()
     data = _try_read_torrent(content)
     assert base64.b64encode(content).decode() == data, "should base64 bytes"
 
 
-def test_real_add_magnet(tr_client: Client):
+def test_real_add_magnet(tr_client: Client) -> None:
     tr_client.add_torrent(magnet_url)
     assert len(tr_client.get_torrents()) == 1, "transmission should has at least 1 task"
 
 
-def test_real_add_torrent_fd(tr_client: Client):
+def test_real_add_torrent_fd(tr_client: Client) -> None:
     with open("tests/fixtures/iso.torrent", "rb") as f:
         tr_client.add_torrent(f)
     assert len(tr_client.get_torrents()) == 1, "transmission should has at least 1 task"
 
 
-def test_real_add_torrent_http(tr_client: Client):
+def test_real_add_torrent_http(tr_client: Client) -> None:
     tr_client.add_torrent(torrent_url)
     assert len(tr_client.get_torrents()) == 1, "transmission should has at least 1 task"
 
 
-def test_real_stop(tr_client: Client, fake_hash_factory):
+def test_real_stop(tr_client: Client, fake_hash_factory: Callable[[], str]) -> None:
     info_hash = fake_hash_factory()
     url = hash_to_magnet(info_hash)
     tr_client.add_torrent(url)
@@ -161,7 +171,7 @@ def test_real_stop(tr_client: Client, fake_hash_factory):
     assert ret, "torrent should be stopped"
 
 
-def test_real_torrent_start_all(tr_client: Client, fake_hash_factory):
+def test_real_torrent_start_all(tr_client: Client, fake_hash_factory: Callable[[], str]) -> None:
     tr_client.add_torrent(torrent_url, paused=True, timeout=10)
     for torrent in tr_client.get_torrents():
         assert torrent.stopped or torrent.checking, "all torrent should be stopped"
@@ -171,25 +181,26 @@ def test_real_torrent_start_all(tr_client: Client, fake_hash_factory):
         assert torrent.downloading or torrent.checking, "all torrent should be downloading"
 
 
-def test_real_session_get(tr_client: Client):
+def test_real_session_get(tr_client: Client) -> None:
     tr_client.get_session()
 
 
-def test_real_free_space(tr_client: Client):
+def test_real_free_space(tr_client: Client) -> None:
     session = tr_client.get_session()
+    assert session.download_dir is not None
     tr_client.free_space(session.download_dir)
 
 
-def test_real_session_stats(tr_client: Client):
+def test_real_session_stats(tr_client: Client) -> None:
     tr_client.session_stats()
 
 
-def test_wrong_logger():
+def test_wrong_logger() -> None:
     with pytest.raises(TypeError):
-        Client(logger="something")
+        Client(logger="something")  # type: ignore[arg-type]
 
 
-def test_real_torrent_attr_type(tr_client: Client):
+def test_real_torrent_attr_type(tr_client: Client) -> None:
     with open("tests/fixtures/iso.torrent", "rb") as f:
         tr_client.add_torrent(f)
     for torrent in tr_client.get_torrents():
@@ -197,7 +208,7 @@ def test_real_torrent_attr_type(tr_client: Client):
         assert isinstance(torrent.name, str)
 
 
-def test_real_torrent_get_files(tr_client: Client):
+def test_real_torrent_get_files(tr_client: Client) -> None:
     with open("tests/fixtures/iso.torrent", "rb") as f:
         tr_client.add_torrent(f)
     assert len(tr_client.get_torrents()) == 1, "transmission should has at least 1 task"
@@ -210,23 +221,23 @@ def test_real_torrent_get_files(tr_client: Client):
     "status_code",
     [401, 403],
 )
-def test_raise_unauthorized(status_code):
+def test_raise_unauthorized(status_code: int) -> None:
     m = mock.Mock(return_value=mock.Mock(status=status_code))
     with mock.patch("urllib3.HTTPConnectionPool.request", m), pytest.raises(TransmissionAuthError):
         Client()
 
 
-def test_ensure_location_str_relative():
+def test_ensure_location_str_relative() -> None:
     with pytest.raises(ValueError, match="relative"):
         ensure_location_str(pathlib.Path("."))
 
 
-def test_ensure_location_str_absolute():
+def test_ensure_location_str_absolute() -> None:
     ensure_location_str(pathlib.Path(".").absolute())
 
 
 @skip_on(ServerTooLowError, "group methods is added in rpc version 17")
-def test_groups(tr_client: Client):
+def test_groups(tr_client: Client) -> None:
     if tr_client.get_session().rpc_version < 17:
         raise ServerTooLowError
 
