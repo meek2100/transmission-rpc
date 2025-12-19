@@ -1,10 +1,13 @@
+import importlib
 import json
+import logging
 from unittest import mock
 
 import pytest
 import urllib3
 
-from transmission_rpc.client import Client
+import transmission_rpc.client
+from transmission_rpc.client import Client, _parse_torrent_id, _parse_torrent_ids
 from transmission_rpc.constants import RpcMethod
 from transmission_rpc.error import (
     TransmissionAuthError,
@@ -149,3 +152,59 @@ def test_deprecated_properties(client: Client) -> None:
         _ = client.semver_version
     with pytest.warns(DeprecationWarning, match=r"use .get_session\(\).rpc_version instead"):
         _ = client.rpc_version
+
+
+def test_parse_torrent_id_invalid_str() -> None:
+    with pytest.raises(ValueError, match="is not valid torrent id"):
+        _parse_torrent_id("invalid")
+
+
+def test_parse_torrent_id_invalid_type() -> None:
+    with pytest.raises(ValueError, match="is not valid torrent id"):
+        _parse_torrent_id(1.5)  # type: ignore
+
+
+def test_parse_torrent_ids_invalid() -> None:
+    with pytest.raises(ValueError, match="Invalid torrent id"):
+        _parse_torrent_ids(1.5)  # type: ignore
+
+
+def test_client_init_invalid_timeout(mock_http_client: object) -> None:
+    with pytest.raises(TypeError, match="unsupported value"):
+        Client(timeout="invalid")  # type: ignore
+
+
+def test_client_timeout_setter_invalid(client: Client) -> None:
+    with pytest.raises(TypeError, match="must use Timeout instance"):
+        client.timeout = 10  # type: ignore
+
+
+def test_request_invalid_method(client: Client) -> None:
+    with pytest.raises(TypeError, match="request takes method as string"):
+        client._request(1)  # type: ignore # noqa: SLF001
+
+
+def test_request_invalid_arguments(client: Client) -> None:
+    with pytest.raises(TypeError, match="request takes arguments should be dict"):
+        client._request("method", arguments="invalid")  # type: ignore # noqa: SLF001
+
+
+def test_request_require_ids(client: Client) -> None:
+    with pytest.raises(ValueError, match="request require ids"):
+        client._request("method", require_ids=True)  # type: ignore[arg-type] # noqa: SLF001
+
+
+def test_client_init_logger_valid(mock_http_client: object) -> None:
+    logger = logging.getLogger("test")
+    c = Client(logger=logger)
+    assert c.logger == logger
+
+
+def test_client_version_import_error() -> None:
+    with mock.patch("importlib.metadata.version", side_effect=ImportError):
+        importlib.reload(transmission_rpc.client)
+        assert transmission_rpc.client.__version__ == "develop"
+
+    # Restore
+    importlib.reload(transmission_rpc.client)
+    assert transmission_rpc.client.__version__ != "develop"

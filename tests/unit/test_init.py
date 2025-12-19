@@ -1,8 +1,11 @@
-from unittest import mock
-import pytest
-from transmission_rpc import from_url
-from typing import Generator
 import json
+from collections.abc import Generator
+from unittest import mock
+
+import pytest
+
+from transmission_rpc import from_url
+
 
 @pytest.fixture
 def mock_network() -> Generator[None, None, None]:
