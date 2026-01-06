@@ -1,4 +1,4 @@
-# ruff: noqa: SLF001, S108
+# ruff: noqa: SLF001, S108, PLC0415, PT030, S106, RUF043, PT018
 import io
 import json
 import pathlib
@@ -13,11 +13,12 @@ from transmission_rpc.torrent import Torrent
 
 def test_http_unix_init():
     """Cover initialization of http+unix protocol"""
-    with mock.patch("transmission_rpc.client.UnixHTTPConnectionPool") as mock_pool:
-        # Patch the method on the class directly to ensure it catches all instances
-        with mock.patch.object(Client, "get_session", autospec=True):
-            c = Client(protocol="http+unix", host="/tmp/test", path="/transmission/")
-            assert c._url == "http+unix://localhost:9091/transmission/rpc"
+    with (
+        mock.patch("transmission_rpc.client.UnixHTTPConnectionPool"),
+        mock.patch.object(Client, "get_session", autospec=True),
+    ):
+        c = Client(protocol="http+unix", host="/tmp/test", path="/transmission/")
+        assert c._url == "http+unix://localhost:9091/transmission/rpc"
 
 def test_json_decode_error():
     """Cover JSON decode error handling in _request"""
