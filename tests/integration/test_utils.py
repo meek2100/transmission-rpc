@@ -13,13 +13,9 @@ from transmission_rpc import DEFAULT_TIMEOUT, from_url, utils
 from transmission_rpc.constants import LOGGER
 
 
-def assert_almost_eq(value: float, expected: float):
-    assert abs(value - expected) < 1
-
-
 @pytest.mark.parametrize(
     ("delta", "expected"),
-    {
+    list({
         datetime.timedelta(0, 0): "0 00:00:00",
         datetime.timedelta(0, 10): "0 00:00:10",
         datetime.timedelta(0, 60): "0 00:01:00",
@@ -27,15 +23,15 @@ def assert_almost_eq(value: float, expected: float):
         datetime.timedelta(0, 3661): "0 01:01:01",
         datetime.timedelta(1, 3661): "1 01:01:01",
         datetime.timedelta(13, 65660): "13 18:14:20",
-    }.items(),
+    }.items()),
 )
 def test_format_timedelta(delta, expected):
-    assert utils.format_timedelta(delta), expected
+    assert utils.format_timedelta(delta) == expected
 
 
 @pytest.mark.parametrize(
     ("url", "kwargs"),
-    {
+    list({
         "http://a:b@127.0.0.1:9092/transmission/rpc": {
             "protocol": "http",
             "username": "a",
@@ -76,7 +72,7 @@ def test_format_timedelta(delta, expected):
             "port": None,
             "path": "/transmission/rpc",
         },
-    }.items(),
+    }.items()),
 )
 def test_from_url(url: str, kwargs: dict[str, Any]):
     with mock.patch("transmission_rpc.Client") as m:
