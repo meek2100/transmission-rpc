@@ -1,8 +1,9 @@
 import json
+import logging
 import socket
 from unittest import mock
 import pytest
-from transmission_rpc.client import Client, TransmissionError
+from transmission_rpc.client import Client, TransmissionError, Timeout
 from transmission_rpc.session import Session
 from transmission_rpc.torrent import Torrent
 from transmission_rpc.constants import Priority
@@ -170,7 +171,7 @@ def test_torrent_methods_and_props():
         "seedRatioLimit": 0.0,
         "seedRatioMode": 0,
         "sequential_download": False,
-        "totalSize": 0,
+        "totalSize": 100,
         "torrentFile": "",
         "uploadedEver": 0,
         "uploadLimit": 0,
@@ -190,6 +191,12 @@ def test_torrent_methods_and_props():
 
     t = Torrent(fields=fields)
 
+    # available
+    # bytes_done = 100
+    # bytes_avail = 0 + 100 = 100
+    # ratio = 100 / 100 = 1.0 => 100.0
+    assert t.available == 100.0
+
     # __str__ and __repr__
     assert str(t) == "<transmission_rpc.Torrent 'test'>"
     assert repr(t) == "<transmission_rpc.Torrent hashString='hash'>"
@@ -202,6 +209,8 @@ def test_torrent_methods_and_props():
     assert t.format_eta() == "not available"
     t.fields["eta"] = -2
     assert t.format_eta() == "unknown"
+    t.fields["eta"] = 3600
+    assert t.format_eta() == "0 01:00:00"
 
     # Deprecated into_hash
     with pytest.warns(DeprecationWarning):
@@ -213,6 +222,9 @@ def test_torrent_methods_and_props():
     assert files[0].priority is None
     assert files[0].selected is None
 
+    # pieces
+    assert t.pieces is not None
+
     # Progress ZeroDivisionError check
     # Force percentDone missing to trigger calculation
     del t.fields["percentDone"]
@@ -220,6 +232,10 @@ def test_torrent_methods_and_props():
     t.fields["leftUntilDone"] = 0
     # Should catch ZeroDivisionError and return 0.0
     assert t.progress == 0.0
+
+    # Init missing id
+    with pytest.raises(ValueError, match="requires field 'id'"):
+        Torrent(fields={})
 
 def test_groups_coverage():
     """Cover set_group and get_groups which are skipped on older servers"""
@@ -244,6 +260,10 @@ def test_groups_coverage():
         c._request.return_value = {"group": []}
         assert c.get_group("missing") is None
 
+        # Test get_groups with list
+        c.get_groups(["test_g"])
+        c._request.assert_called_with(mock.ANY, {"group": ["test_g"]}, timeout=None)
+
 def test_remove_unset_value():
     from transmission_rpc.client import remove_unset_value
     assert remove_unset_value({"a": 1, "b": None}) == {"a": 1}
@@ -255,7 +275,6 @@ def test_single_str_as_list():
     assert _single_str_as_list(["a"]) == ["a"]
 
 def test_timeout_property():
-    from transmission_rpc.client import Timeout
     with mock.patch.object(Client, 'get_session', autospec=True):
         c = Client(timeout=10)
         assert isinstance(c.timeout, Timeout)
@@ -275,3 +294,227 @@ def test_ensure_location_str():
     import pathlib
     p = pathlib.Path("/tmp")
     assert ensure_location_str(p) == str(p)
+
+def test_client_init_variations():
+    """Cover Client init branches"""
+    with mock.patch.object(Client, 'get_session', autospec=True):
+        # timeout=None
+        c = Client(timeout=None)
+        assert c.timeout is None
+
+        # timeout=Timeout object
+        t = Timeout(10)
+        c = Client(timeout=t)
+        assert c.timeout is t
+
+        # path fix
+        c = Client(path="/transmission/")
+        assert c._path == "/transmission/rpc"
+
+        # Auth
+        c = Client(username="u", password="p")
+
+        # HTTPS
+        with mock.patch("transmission_rpc.client.urllib3.HTTPSConnectionPool") as mock_https:
+            c = Client(protocol="https")
+            mock_https.assert_called()
+
+def test_ensure_location_str_error():
+    """Cover ensure_location_str relative path error"""
+    from transmission_rpc.client import ensure_location_str
+    import pathlib
+    p = pathlib.Path("relative/path")
+    with pytest.raises(ValueError, match="using relative `pathlib.Path`"):
+        ensure_location_str(p)
+
+def test_request_errors():
+    """Cover _request type checking and logic"""
+    with mock.patch.object(Client, 'get_session', autospec=True):
+        c = Client()
+        c.logger = mock.Mock()
+
+        # Method check
+        with pytest.raises(TypeError, match="request takes method as string"):
+            c._request(method=123) # type: ignore
+
+        # Arguments check
+        with pytest.raises(TypeError, match="request takes arguments should be dict"):
+            c._request(method="m", arguments="not dict") # type: ignore
+
+        # Require ids
+        with pytest.raises(ValueError, match="request require ids"):
+            c._request(method="m", require_ids=True)
+
+def test_request_response_logic():
+    """Cover response parsing logic"""
+    with mock.patch.object(Client, 'get_session', autospec=True):
+        c = Client()
+        c.logger = mock.Mock()
+        # Enable debug to cover logging
+        c.logger.isEnabledFor.return_value = True
+
+        # Mock _http_query
+        # 1. Missing result
+        c._http_query = mock.Mock(return_value=json.dumps({"arguments": {}}))
+        with pytest.raises(TransmissionError, match="missing without result"):
+            c._request("method")
+
+        c.logger.debug.assert_called()
+
+def test_more_client_methods():
+    """Cover remaining client methods"""
+    with mock.patch.object(Client, 'get_session', autospec=True):
+        c = Client()
+        c._request = mock.Mock()
+
+        # start_all bypass_queue
+        c._request.return_value = {"torrents": []}
+        c.start_all(bypass_queue=True)
+        assert c._request.call_args[0][0] == "torrent-start-now"
+
+        # stop_torrent
+        c.stop_torrent(ids=1)
+
+        # reannounce_torrent
+        c.reannounce_torrent(ids=1)
+
+        # blocklist_update
+        c._request.return_value = {"blocklist-size": 10}
+        assert c.blocklist_update() == 10
+
+        # session_close
+        c.session_close()
+
+        # Context manager
+        c.close = mock.Mock()
+        with c:
+            pass
+        c.close.assert_called()
+
+def test_add_torrent_args():
+    """Cover add_torrent args"""
+    with mock.patch.object(Client, 'get_session', autospec=True):
+        c = Client()
+        c._request = mock.Mock(return_value={"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
+
+        # labels, sequential_download, bandwidthPriority
+        c.add_torrent("magnet:?xt=urn:btih:a", labels=["l"], sequential_download=True, bandwidthPriority=1)
+
+def test_even_more_coverage():
+    """Cover remaining lines"""
+    with mock.patch.object(Client, 'get_session', autospec=True):
+        c = Client()
+        c._request = mock.Mock()
+
+        # set_session invalid encryption
+        with pytest.raises(ValueError, match="Invalid encryption value"):
+            c.set_session(encryption="invalid") # type: ignore
+
+        # start_torrent bypass_queue
+        c.start_torrent(ids=1, bypass_queue=True)
+        assert c._request.call_args[0][0] == "torrent-start-now"
+
+        # get_torrents with arguments
+        c._request.return_value = {"torrents": []}
+        c.get_torrents(ids=1, arguments=["name"])
+        args = c._request.call_args[0][1]["fields"]
+        assert "name" in args and "id" in args
+
+        # get_recently_active_torrents with arguments
+        c._request.return_value = {"torrents": [], "removed": []}
+        c.get_recently_active_torrents(arguments=["name"])
+        args = c._request.call_args[0][1]["fields"]
+        assert "name" in args
+
+        # free_space success
+        c._request.return_value = {"path": "/tmp", "size-bytes": 100}
+        assert c.free_space("/tmp") == 100
+
+        # free_space fail
+        c._request.return_value = {"path": "/other", "size-bytes": 0}
+        assert c.free_space("/tmp") is None
+
+def test_add_torrent_types():
+    """Cover add_torrent with different input types"""
+    import pathlib
+    import io
+
+    with mock.patch.object(Client, 'get_session', autospec=True):
+        c = Client()
+        c._request = mock.Mock(return_value={"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
+
+        # bytes
+        c.add_torrent(b"torrent content")
+        assert "metainfo" in c._request.call_args[0][1]
+
+        # file-like
+        f = io.BytesIO(b"torrent content")
+        c.add_torrent(f)
+        assert "metainfo" in c._request.call_args[0][1]
+
+        # Path (local file)
+        # We need to mock path reading
+        p = pathlib.Path("test.torrent")
+        with mock.patch("pathlib.Path.read_bytes", return_value=b"content"):
+             c.add_torrent(p)
+        assert "metainfo" in c._request.call_args[0][1]
+
+def test_final_straw():
+    """Cover the last few lines"""
+    with mock.patch.object(Client, 'get_session', autospec=True):
+        c = Client()
+        c._request = mock.Mock()
+
+        # 489: empty metadata
+        with pytest.raises(ValueError, match="Torrent metadata is empty"):
+            c.add_torrent(b"")
+
+        # 1255: _try_read_torrent returns None for unknown type
+        # We pass an object that is not str/Path/bytes/read
+        obj = object()
+        # It returns None, so code proceeds to: kwargs["filename"] = obj
+        # Then calls _request.
+        c._request.return_value = {"torrent-added": {"id": 1}}
+        c.add_torrent(obj) # type: ignore
+
+        # start_all bypass_queue with torrents to fully exercise logic
+        c._request.side_effect = [
+            {"torrents": [{"id": 1, "hashString": "h", "queuePosition": 0}]}, # get_torrents
+            {} # start
+        ]
+        c.start_all(bypass_queue=True)
+        # Check second call argument
+        assert c._request.call_args_list[-1][0][0] == "torrent-start-now"
+
+    # Use a new client to test _request logic because we need the real _request to run
+    # Client.get_session is already patched by the outer context if we are not careful
+    # But here we are outside the with block of c
+
+    with mock.patch.object(Client, 'get_session', autospec=True):
+        c2 = Client()
+        c2.logger = mock.Mock()
+
+        # 1. SessionStats fallback (358)
+        c2._http_query = mock.Mock(return_value=json.dumps({
+            "result": "success",
+            "arguments": {"activeTorrentCount": 1}
+        }))
+        stats = c2.session_stats()
+        assert stats.active_torrent_count == 1
+
+        # 2. TorrentAdd logic (338)
+        c2._http_query.return_value = json.dumps({
+            "result": "success",
+            "arguments": {"torrent-added": {"id": 1, "name": "n", "hashString": "h"}}
+        })
+        # add_torrent calls _request. We pass 'magnet' so it doesn't try to read file.
+        t = c2.add_torrent("magnet:?xt=urn:btih:h")
+        assert t.id == 1
+
+        # 3. get_torrent finding torrent (593-594)
+        c2._http_query.return_value = json.dumps({
+            "result": "success",
+            "arguments": {"torrents": [{"id": 1, "name": "n", "hashString": "h"}]}
+        })
+        t = c2.get_torrent(1)
+        assert t.id == 1
