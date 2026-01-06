@@ -295,7 +295,7 @@ def test_timeout_property():
 def test_ensure_location_str():
     # Only test the Path branch as str is trivial
     from transmission_rpc.client import ensure_location_str
-    p = pathlib.Path("/tmp")
+    p = pathlib.Path.cwd() / "tmp"
     assert ensure_location_str(p) == str(p)
 
 def test_client_init_variations():
@@ -518,3 +518,77 @@ def test_final_straw():
         })
         t = c2.get_torrent(1)
         assert t.id == 1
+
+def test_conftest_timeout():
+    from tests.conftest import ensure_transmission_running
+    # Unwrap fixture
+    func = ensure_transmission_running
+    while hasattr(func, "__wrapped__"):
+        func = func.__wrapped__
+
+    # Mock socket to always fail/timeout
+    with mock.patch("socket.socket") as mock_sock:
+        # Mock connection failure
+        mock_sock.return_value.__enter__.return_value.connect.side_effect = ConnectionError
+        # Mock time.time to simulate timeout
+        with mock.patch("time.time", side_effect=[0, 31]):
+             with pytest.raises(ConnectionError, match="timeout"):
+                 func()
+
+def test_util_skip_on():
+    from tests.util import skip_on, ServerTooLowError
+
+    @skip_on(ServerTooLowError, "reason")
+    def func():
+        raise ServerTooLowError
+
+    # Calling func should skip
+    func()
+
+def test_tr_client_fixture():
+    from tests.conftest import tr_client
+    # tr_client is a fixture. access wrapped
+    func = tr_client
+    while hasattr(func, "__wrapped__"):
+        func = func.__wrapped__
+
+    # Mock Client
+    with mock.patch("tests.conftest.Client") as mock_client_cls:
+        c = mock_client_cls.return_value.__enter__.return_value
+        c.get_torrents.return_value = [mock.Mock(id=1)]
+
+        # Generator
+        gen = func(ensure_transmission_running=None)
+        next(gen) # Setup
+        # Verify remove_torrent called
+        c.remove_torrent.assert_called_with(1, delete_data=True)
+
+        try:
+            next(gen) # Teardown
+        except StopIteration:
+            pass
+        # Verify remove_torrent called again
+        assert c.remove_torrent.call_count == 2
+
+def test_conftest_success():
+    from tests.conftest import ensure_transmission_running
+    func = ensure_transmission_running
+    while hasattr(func, "__wrapped__"):
+        func = func.__wrapped__
+
+    with mock.patch("socket.socket") as mock_sock:
+        # Connect succeeds
+        func()
+        # Verify connect called
+        mock_sock.return_value.__enter__.return_value.connect.assert_called()
+
+def test_fake_hash_factory():
+    from tests.conftest import fake_hash_factory
+    func = fake_hash_factory
+    while hasattr(func, "__wrapped__"):
+        func = func.__wrapped__
+
+    # It returns a lambda
+    factory = func()
+    # Call lambda
+    assert len(factory()) == 40
