@@ -1,4 +1,5 @@
 import json
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -85,7 +86,25 @@ def test_deprecated_properties(client: Client) -> None:
         _ = client.session_id
     with pytest.warns(DeprecationWarning, match="do not use"):
         _ = client.server_version
-    with pytest.warns(DeprecationWarning, match="do not use"):
+    with pytest.warns(DeprecationWarning, match="use .get_session"):
         _ = client.semver_version
-    with pytest.warns(DeprecationWarning, match="do not use"):
+    with pytest.warns(DeprecationWarning, match="use .get_session"):
         _ = client.rpc_version
+
+def test_client_init_no_auth(mock_http_client: Any) -> None:
+    # mock_http_client fixture mocks HTTPConnectionPool for the whole test session
+    # but strictly for tests using `client` fixture?
+    # No, fixture scope is function?
+    # `mock_http_client` in conftest.py yields mock.
+    # So if I request it in arguments, it will be active.
+    c = Client(username=None, password=None)
+    headers = c._Client__auth_headers # type: ignore[attr-defined] # noqa: SLF001
+    assert "Authorization" not in headers
+
+def test_client_init_timeout(mock_http_client: Any) -> None:
+    c = Client(timeout=10.0)
+    assert c.timeout is not None
+    assert c.timeout.total == 10.0
+    c2 = Client(timeout=10)
+    assert c2.timeout is not None
+    assert c2.timeout.total == 10.0
