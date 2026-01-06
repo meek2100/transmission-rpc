@@ -1,25 +1,28 @@
+# ruff: noqa: SLF001, S108
+import io
 import json
-import logging
-import socket
+import pathlib
 from unittest import mock
+
 import pytest
-from transmission_rpc.client import Client, TransmissionError, Timeout
+
+from transmission_rpc.client import Client, Timeout, TransmissionError
 from transmission_rpc.session import Session
 from transmission_rpc.torrent import Torrent
-from transmission_rpc.constants import Priority
+
 
 def test_http_unix_init():
     """Cover initialization of http+unix protocol"""
     with mock.patch("transmission_rpc.client.UnixHTTPConnectionPool") as mock_pool:
         # Patch the method on the class directly to ensure it catches all instances
-        with mock.patch.object(Client, 'get_session', autospec=True):
+        with mock.patch.object(Client, "get_session", autospec=True):
             c = Client(protocol="http+unix", host="/tmp/test", path="/transmission/")
             assert c._url == "http+unix://localhost:9091/transmission/rpc"
 
 def test_json_decode_error():
     """Cover JSON decode error handling in _request"""
     # Patch get_session so init doesn't make network calls
-    with mock.patch.object(Client, 'get_session', autospec=True):
+    with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         # Mock _http_query to return non-json string
         # We need to mock the instance method on the created instance 'c'
@@ -36,8 +39,8 @@ def test_json_decode_error():
 def test_import_error_version():
     """Cover the ImportError block for version retrieval"""
     # We need to force a reload of the module to trigger the top-level try/except
-    import sys
     import importlib
+
     import transmission_rpc.client
 
     # Mock importlib.metadata.version to raise ImportError
@@ -51,7 +54,7 @@ def test_import_error_version():
 
 def test_deprecated_client_properties():
     """Cover deprecated properties"""
-    with mock.patch.object(Client, 'get_session', autospec=True):
+    with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         # Manually set private attributes that are usually set in init/get_session
         c._Client__semver_version = "1.0.0"
@@ -75,14 +78,14 @@ def test_deprecated_client_properties():
 
 def test_file_scheme_error():
     """Cover usage of file:// scheme error"""
-    with mock.patch.object(Client, 'get_session', autospec=True):
+    with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         with pytest.raises(ValueError, match="support for `file://` URL has been removed"):
             c.add_torrent("file:///tmp/test.torrent")
 
 def test_change_torrent_warnings():
     """Cover warnings for new RPC features"""
-    with mock.patch.object(Client, 'get_session', autospec=True):
+    with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         # Mock internal request method
         c._request = mock.Mock()
@@ -239,7 +242,7 @@ def test_torrent_methods_and_props():
 
 def test_groups_coverage():
     """Cover set_group and get_groups which are skipped on older servers"""
-    with mock.patch.object(Client, 'get_session', autospec=True):
+    with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         # We need to mock _request to return something valid
         c._request = mock.Mock(return_value={"group": [{"name": "test_g"}]})
@@ -275,7 +278,7 @@ def test_single_str_as_list():
     assert _single_str_as_list(["a"]) == ["a"]
 
 def test_timeout_property():
-    with mock.patch.object(Client, 'get_session', autospec=True):
+    with mock.patch.object(Client, "get_session", autospec=True):
         c = Client(timeout=10)
         assert isinstance(c.timeout, Timeout)
 
@@ -291,13 +294,12 @@ def test_timeout_property():
 def test_ensure_location_str():
     # Only test the Path branch as str is trivial
     from transmission_rpc.client import ensure_location_str
-    import pathlib
     p = pathlib.Path("/tmp")
     assert ensure_location_str(p) == str(p)
 
 def test_client_init_variations():
     """Cover Client init branches"""
-    with mock.patch.object(Client, 'get_session', autospec=True):
+    with mock.patch.object(Client, "get_session", autospec=True):
         # timeout=None
         c = Client(timeout=None)
         assert c.timeout is None
@@ -322,14 +324,13 @@ def test_client_init_variations():
 def test_ensure_location_str_error():
     """Cover ensure_location_str relative path error"""
     from transmission_rpc.client import ensure_location_str
-    import pathlib
     p = pathlib.Path("relative/path")
     with pytest.raises(ValueError, match="using relative `pathlib.Path`"):
         ensure_location_str(p)
 
 def test_request_errors():
     """Cover _request type checking and logic"""
-    with mock.patch.object(Client, 'get_session', autospec=True):
+    with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         c.logger = mock.Mock()
 
@@ -347,7 +348,7 @@ def test_request_errors():
 
 def test_request_response_logic():
     """Cover response parsing logic"""
-    with mock.patch.object(Client, 'get_session', autospec=True):
+    with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         c.logger = mock.Mock()
         # Enable debug to cover logging
@@ -363,7 +364,7 @@ def test_request_response_logic():
 
 def test_more_client_methods():
     """Cover remaining client methods"""
-    with mock.patch.object(Client, 'get_session', autospec=True):
+    with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         c._request = mock.Mock()
 
@@ -393,7 +394,7 @@ def test_more_client_methods():
 
 def test_add_torrent_args():
     """Cover add_torrent args"""
-    with mock.patch.object(Client, 'get_session', autospec=True):
+    with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         c._request = mock.Mock(return_value={"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
 
@@ -402,7 +403,7 @@ def test_add_torrent_args():
 
 def test_even_more_coverage():
     """Cover remaining lines"""
-    with mock.patch.object(Client, 'get_session', autospec=True):
+    with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         c._request = mock.Mock()
 
@@ -436,10 +437,8 @@ def test_even_more_coverage():
 
 def test_add_torrent_types():
     """Cover add_torrent with different input types"""
-    import pathlib
-    import io
 
-    with mock.patch.object(Client, 'get_session', autospec=True):
+    with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         c._request = mock.Mock(return_value={"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
 
@@ -461,7 +460,7 @@ def test_add_torrent_types():
 
 def test_final_straw():
     """Cover the last few lines"""
-    with mock.patch.object(Client, 'get_session', autospec=True):
+    with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         c._request = mock.Mock()
 
@@ -490,7 +489,7 @@ def test_final_straw():
     # Client.get_session is already patched by the outer context if we are not careful
     # But here we are outside the with block of c
 
-    with mock.patch.object(Client, 'get_session', autospec=True):
+    with mock.patch.object(Client, "get_session", autospec=True):
         c2 = Client()
         c2.logger = mock.Mock()
 
