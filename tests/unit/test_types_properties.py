@@ -1,11 +1,10 @@
 import contextlib
+from typing import Any
 
 from transmission_rpc.session import Session, SessionStats, Stats, Units
 from transmission_rpc.torrent import FileStat, Peer, PeersFrom, Status, Torrent, Tracker, TrackerStats, get_status
 from transmission_rpc.types import BitMap, Group, PortTestResult
 
-
-from typing import Any
 
 def check_properties(cls: type, obj: Any) -> None:
     for prop in dir(cls):

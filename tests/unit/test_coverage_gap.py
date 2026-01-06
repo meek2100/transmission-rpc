@@ -7,7 +7,7 @@ from urllib3 import Timeout
 
 from transmission_rpc.client import Client
 from transmission_rpc.session import Session
-from transmission_rpc.torrent import Torrent
+from transmission_rpc.torrent import Status, Torrent
 
 
 def test_client_init_timeout_types(mock_http_client: Any) -> None:
@@ -95,12 +95,10 @@ def test_session_property_explicit() -> None:
     assert val is True
 
 def test_context_manager_error(client: Client) -> None:
-    with pytest.raises(ValueError):
-        with client:
-            raise ValueError("test")
+    with pytest.raises(ValueError, match="test"), client:
+        raise ValueError("test")
 
 def test_torrent_status_properties() -> None:
-    from transmission_rpc.torrent import Status
     s = Status("checking")
     assert s.checking
     assert not s.stopped
@@ -123,4 +121,4 @@ def test_torrent_misc_properties() -> None:
     }
     t = Torrent(fields=fields)
     assert t.seed_idle_mode.value == 0
-    assert t._status_str == "downloading"
+    assert t._status_str == "downloading" # noqa: SLF001

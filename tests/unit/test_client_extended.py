@@ -16,7 +16,7 @@ def test_client_void_methods(client: Client) -> None:
         ("stop_torrent", {"ids": 1}),
         ("verify_torrent", {"ids": 1}),
         ("reannounce_torrent", {"ids": 1}),
-        ("move_torrent_data", {"ids": 1, "location": "/tmp"}),
+        ("move_torrent_data", {"ids": 1, "location": "/tmp"}), # noqa: S108
         ("queue_top", {"ids": 1}),
         ("queue_bottom", {"ids": 1}),
         ("queue_up", {"ids": 1}),
