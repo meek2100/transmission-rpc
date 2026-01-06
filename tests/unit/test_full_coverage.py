@@ -1,4 +1,5 @@
 # ruff: noqa: SLF001, S108, PLC0415, PT030, S106, RUF043, PT018
+import contextlib
 import io
 import json
 import pathlib
@@ -531,12 +532,11 @@ def test_conftest_timeout():
         # Mock connection failure
         mock_sock.return_value.__enter__.return_value.connect.side_effect = ConnectionError
         # Mock time.time to simulate timeout
-        with mock.patch("time.time", side_effect=[0, 31]):
-             with pytest.raises(ConnectionError, match="timeout"):
-                 func()
+        with mock.patch("time.time", side_effect=[0, 31]), pytest.raises(ConnectionError, match="timeout"):
+            func()
 
 def test_util_skip_on():
-    from tests.util import skip_on, ServerTooLowError
+    from tests.util import ServerTooLowError, skip_on
 
     @skip_on(ServerTooLowError, "reason")
     def func():
@@ -563,10 +563,8 @@ def test_tr_client_fixture():
         # Verify remove_torrent called
         c.remove_torrent.assert_called_with(1, delete_data=True)
 
-        try:
+        with contextlib.suppress(StopIteration):
             next(gen) # Teardown
-        except StopIteration:
-            pass
         # Verify remove_torrent called again
         assert c.remove_torrent.call_count == 2
 
