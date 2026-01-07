@@ -21,6 +21,7 @@ def test_http_unix_init():
         c = Client(protocol="http+unix", host="/tmp/test", path="/transmission/")
         assert c._url == "http+unix://localhost:9091/transmission/rpc"
 
+
 def test_json_decode_error():
     """Cover JSON decode error handling in _request"""
     # Patch get_session so init doesn't make network calls
@@ -38,6 +39,7 @@ def test_json_decode_error():
         assert "failed to parse response as json" in str(excinfo.value)
         c.logger.exception.assert_called()
 
+
 def test_import_error_version():
     """Cover the ImportError block for version retrieval"""
     # We need to force a reload of the module to trigger the top-level try/except
@@ -53,6 +55,7 @@ def test_import_error_version():
 
     # Restore normal version
     importlib.reload(transmission_rpc.client)
+
 
 def test_deprecated_client_properties():
     """Cover deprecated properties"""
@@ -78,12 +81,14 @@ def test_deprecated_client_properties():
         with pytest.warns(DeprecationWarning):
             assert c.raw_session == {}
 
+
 def test_file_scheme_error():
     """Cover usage of file:// scheme error"""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         with pytest.raises(ValueError, match="support for `file://` URL has been removed"):
             c.add_torrent("file:///tmp/test.torrent")
+
 
 def test_change_torrent_warnings():
     """Cover warnings for new RPC features"""
@@ -107,6 +112,7 @@ def test_change_torrent_warnings():
         c.change_torrent(ids=1, tracker_list=[["a"]])
         c._rpc_version_warning.assert_any_call(17)
 
+
 def test_session_default_trackers():
     """Cover session default_trackers property"""
     s = Session(fields={"default-trackers": "t1\nt2"})
@@ -114,6 +120,7 @@ def test_session_default_trackers():
 
     s2 = Session(fields={})
     assert s2.default_trackers is None
+
 
 def test_torrent_methods_and_props():
     """Cover misc torrent methods and properties"""
@@ -242,6 +249,7 @@ def test_torrent_methods_and_props():
     with pytest.raises(ValueError, match="requires field 'id'"):
         Torrent(fields={})
 
+
 def test_groups_coverage():
     """Cover set_group and get_groups which are skipped on older servers"""
     with mock.patch.object(Client, "get_session", autospec=True):
@@ -269,15 +277,20 @@ def test_groups_coverage():
         c.get_groups(["test_g"])
         c._request.assert_called_with(mock.ANY, {"group": ["test_g"]}, timeout=None)
 
+
 def test_remove_unset_value():
     from transmission_rpc.client import remove_unset_value
+
     assert remove_unset_value({"a": 1, "b": None}) == {"a": 1}
+
 
 def test_single_str_as_list():
     from transmission_rpc.client import _single_str_as_list
+
     assert _single_str_as_list(None) is None
     assert _single_str_as_list("a") == ["a"]
     assert _single_str_as_list(["a"]) == ["a"]
+
 
 def test_timeout_property():
     with mock.patch.object(Client, "get_session", autospec=True):
@@ -291,13 +304,16 @@ def test_timeout_property():
             c.timeout = 10
 
         del c.timeout
-        assert c.timeout.total == 30.0 # Default
+        assert c.timeout.total == 30.0  # Default
+
 
 def test_ensure_location_str():
     # Only test the Path branch as str is trivial
     from transmission_rpc.client import ensure_location_str
+
     p = pathlib.Path.cwd() / "tmp"
     assert ensure_location_str(p) == str(p)
+
 
 def test_client_init_variations():
     """Cover Client init branches"""
@@ -323,12 +339,15 @@ def test_client_init_variations():
             c = Client(protocol="https")
             mock_https.assert_called()
 
+
 def test_ensure_location_str_error():
     """Cover ensure_location_str relative path error"""
     from transmission_rpc.client import ensure_location_str
+
     p = pathlib.Path("relative/path")
     with pytest.raises(ValueError, match="using relative `pathlib.Path`"):
         ensure_location_str(p)
+
 
 def test_request_errors():
     """Cover _request type checking and logic"""
@@ -338,15 +357,16 @@ def test_request_errors():
 
         # Method check
         with pytest.raises(TypeError, match="request takes method as string"):
-            c._request(method=123) # type: ignore
+            c._request(method=123)  # type: ignore
 
         # Arguments check
         with pytest.raises(TypeError, match="request takes arguments should be dict"):
-            c._request(method="m", arguments="not dict") # type: ignore
+            c._request(method="m", arguments="not dict")  # type: ignore
 
         # Require ids
         with pytest.raises(ValueError, match="request require ids"):
             c._request(method="m", require_ids=True)
+
 
 def test_request_response_logic():
     """Cover response parsing logic"""
@@ -363,6 +383,7 @@ def test_request_response_logic():
             c._request("method")
 
         c.logger.debug.assert_called()
+
 
 def test_more_client_methods():
     """Cover remaining client methods"""
@@ -394,6 +415,7 @@ def test_more_client_methods():
             pass
         c.close.assert_called()
 
+
 def test_add_torrent_args():
     """Cover add_torrent args"""
     with mock.patch.object(Client, "get_session", autospec=True):
@@ -403,6 +425,7 @@ def test_add_torrent_args():
         # labels, sequential_download, bandwidthPriority
         c.add_torrent("magnet:?xt=urn:btih:a", labels=["l"], sequential_download=True, bandwidthPriority=1)
 
+
 def test_even_more_coverage():
     """Cover remaining lines"""
     with mock.patch.object(Client, "get_session", autospec=True):
@@ -411,7 +434,7 @@ def test_even_more_coverage():
 
         # set_session invalid encryption
         with pytest.raises(ValueError, match="Invalid encryption value"):
-            c.set_session(encryption="invalid") # type: ignore
+            c.set_session(encryption="invalid")  # type: ignore
 
         # start_torrent bypass_queue
         c.start_torrent(ids=1, bypass_queue=True)
@@ -437,6 +460,7 @@ def test_even_more_coverage():
         c._request.return_value = {"path": "/other", "size-bytes": 0}
         assert c.free_space("/tmp") is None
 
+
 def test_add_torrent_types():
     """Cover add_torrent with different input types"""
 
@@ -457,8 +481,9 @@ def test_add_torrent_types():
         # We need to mock path reading
         p = pathlib.Path("test.torrent")
         with mock.patch("pathlib.Path.read_bytes", return_value=b"content"):
-             c.add_torrent(p)
+            c.add_torrent(p)
         assert "metainfo" in c._request.call_args[0][1]
+
 
 def test_final_straw():
     """Cover the last few lines"""
@@ -476,12 +501,12 @@ def test_final_straw():
         # It returns None, so code proceeds to: kwargs["filename"] = obj
         # Then calls _request.
         c._request.return_value = {"torrent-added": {"id": 1}}
-        c.add_torrent(obj) # type: ignore
+        c.add_torrent(obj)  # type: ignore
 
         # start_all bypass_queue with torrents to fully exercise logic
         c._request.side_effect = [
-            {"torrents": [{"id": 1, "hashString": "h", "queuePosition": 0}]}, # get_torrents
-            {} # start
+            {"torrents": [{"id": 1, "hashString": "h", "queuePosition": 0}]},  # get_torrents
+            {},  # start
         ]
         c.start_all(bypass_queue=True)
         # Check second call argument
@@ -496,32 +521,31 @@ def test_final_straw():
         c2.logger = mock.Mock()
 
         # 1. SessionStats fallback (358)
-        c2._http_query = mock.Mock(return_value=json.dumps({
-            "result": "success",
-            "arguments": {"activeTorrentCount": 1}
-        }))
+        c2._http_query = mock.Mock(
+            return_value=json.dumps({"result": "success", "arguments": {"activeTorrentCount": 1}})
+        )
         stats = c2.session_stats()
         assert stats.active_torrent_count == 1
 
         # 2. TorrentAdd logic (338)
-        c2._http_query.return_value = json.dumps({
-            "result": "success",
-            "arguments": {"torrent-added": {"id": 1, "name": "n", "hashString": "h"}}
-        })
+        c2._http_query.return_value = json.dumps(
+            {"result": "success", "arguments": {"torrent-added": {"id": 1, "name": "n", "hashString": "h"}}}
+        )
         # add_torrent calls _request. We pass 'magnet' so it doesn't try to read file.
         t = c2.add_torrent("magnet:?xt=urn:btih:h")
         assert t.id == 1
 
         # 3. get_torrent finding torrent (593-594)
-        c2._http_query.return_value = json.dumps({
-            "result": "success",
-            "arguments": {"torrents": [{"id": 1, "name": "n", "hashString": "h"}]}
-        })
+        c2._http_query.return_value = json.dumps(
+            {"result": "success", "arguments": {"torrents": [{"id": 1, "name": "n", "hashString": "h"}]}}
+        )
         t = c2.get_torrent(1)
         assert t.id == 1
 
+
 def test_conftest_timeout():
     from tests.conftest import ensure_transmission_running
+
     # Unwrap fixture
     func = ensure_transmission_running
     while hasattr(func, "__wrapped__"):
@@ -535,6 +559,7 @@ def test_conftest_timeout():
         with mock.patch("time.time", side_effect=[0, 31]), pytest.raises(ConnectionError, match="timeout"):
             func()
 
+
 def test_util_skip_on():
     from tests.util import ServerTooLowError, skip_on
 
@@ -545,8 +570,10 @@ def test_util_skip_on():
     # Calling func should skip
     func()
 
+
 def test_tr_client_fixture():
     from tests.conftest import tr_client
+
     # tr_client is a fixture. access wrapped
     func = tr_client
     while hasattr(func, "__wrapped__"):
@@ -559,17 +586,19 @@ def test_tr_client_fixture():
 
         # Generator
         gen = func(ensure_transmission_running=None)
-        next(gen) # Setup
+        next(gen)  # Setup
         # Verify remove_torrent called
         c.remove_torrent.assert_called_with(1, delete_data=True)
 
         with contextlib.suppress(StopIteration):
-            next(gen) # Teardown
+            next(gen)  # Teardown
         # Verify remove_torrent called again
         assert c.remove_torrent.call_count == 2
 
+
 def test_conftest_success():
     from tests.conftest import ensure_transmission_running
+
     func = ensure_transmission_running
     while hasattr(func, "__wrapped__"):
         func = func.__wrapped__
@@ -580,8 +609,10 @@ def test_conftest_success():
         # Verify connect called
         mock_sock.return_value.__enter__.return_value.connect.assert_called()
 
+
 def test_fake_hash_factory():
     from tests.conftest import fake_hash_factory
+
     func = fake_hash_factory
     while hasattr(func, "__wrapped__"):
         func = func.__wrapped__

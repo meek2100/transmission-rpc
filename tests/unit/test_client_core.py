@@ -91,6 +91,7 @@ def test_deprecated_properties(client: Client) -> None:
     with pytest.warns(DeprecationWarning, match="use .get_session"):
         _ = client.rpc_version
 
+
 def test_client_init_no_auth(mock_http_client: Any) -> None:
     # mock_http_client fixture mocks HTTPConnectionPool for the whole test session
     # but strictly for tests using `client` fixture?
@@ -98,8 +99,9 @@ def test_client_init_no_auth(mock_http_client: Any) -> None:
     # `mock_http_client` in conftest.py yields mock.
     # So if I request it in arguments, it will be active.
     c = Client(username=None, password=None)
-    headers = c._Client__auth_headers # type: ignore[attr-defined] # noqa: SLF001
+    headers = c._Client__auth_headers  # type: ignore[attr-defined] # noqa: SLF001
     assert "Authorization" not in headers
+
 
 def test_client_init_timeout(mock_http_client: Any) -> None:
     c = Client(timeout=10.0)

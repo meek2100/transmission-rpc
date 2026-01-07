@@ -243,5 +243,5 @@ def test_groups_low_version(tr_client: Client):
     with mock.patch.object(tr_client, "get_session") as mock_get:
         mock_get.return_value.rpc_version = 16
         with pytest.raises(ServerTooLowError):  # noqa: PT012
-             if tr_client.get_session().rpc_version < 17:
-                 raise ServerTooLowError
+            if tr_client.get_session().rpc_version < 17:
+                raise ServerTooLowError
