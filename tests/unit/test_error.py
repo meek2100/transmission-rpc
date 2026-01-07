@@ -12,6 +12,7 @@ def test_error_str_with_original() -> None:
     err = TransmissionError("message", original=original)
     assert str(err) == 'message Original exception: OriginalError, "original error"'
 
+
 def test_deprecated_raw_response() -> None:
     err = TransmissionError("message", raw_response="raw")
     with pytest.warns(DeprecationWarning, match="use .raw_response instead"):
