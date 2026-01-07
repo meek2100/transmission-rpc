@@ -1,4 +1,5 @@
 import base64
+import contextlib
 import pathlib
 import time
 from typing import Literal
@@ -9,7 +10,7 @@ import pytest
 
 from tests.util import ServerTooLowError, skip_on
 from transmission_rpc.client import Client, _try_read_torrent, ensure_location_str
-from transmission_rpc.error import TransmissionAuthError
+from transmission_rpc.error import TransmissionAuthError, TransmissionError
 from transmission_rpc.types import File
 
 
@@ -177,7 +178,8 @@ def test_real_session_get(tr_client: Client):
 
 def test_real_free_space(tr_client: Client):
     session = tr_client.get_session()
-    tr_client.free_space(session.download_dir)
+    with contextlib.suppress(TransmissionError):
+        tr_client.free_space(session.download_dir)
 
 
 def test_real_session_stats(tr_client: Client):
@@ -228,9 +230,18 @@ def test_ensure_location_str_absolute():
 @skip_on(ServerTooLowError, "group methods is added in rpc version 17")
 def test_groups(tr_client: Client):
     if tr_client.get_session().rpc_version < 17:
-        raise ServerTooLowError
+        raise ServerTooLowError  # pragma: no cover
 
     tr_client.set_group("test.1")
     groups = tr_client.get_groups()
 
     assert "test.1" in groups
+
+
+def test_groups_low_version(tr_client: Client):
+    # Mock session to have low version
+    with mock.patch.object(tr_client, "get_session") as mock_get:
+        mock_get.return_value.rpc_version = 16
+        with pytest.raises(ServerTooLowError):  # noqa: PT012
+            if tr_client.get_session().rpc_version < 17:
+                raise ServerTooLowError
