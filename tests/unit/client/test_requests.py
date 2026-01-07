@@ -12,20 +12,24 @@ from transmission_rpc.error import (
     TransmissionTimeoutError,
 )
 
+
 def test_http_query_connection_error(client: Client) -> None:
     client._Client__http_client.request.side_effect = urllib3.exceptions.ConnectionError("fail")  # type: ignore[attr-defined] # noqa: SLF001
     with pytest.raises(TransmissionConnectError):
         client._http_query({})  # noqa: SLF001
+
 
 def test_http_query_timeout_error(client: Client) -> None:
     client._Client__http_client.request.side_effect = urllib3.exceptions.TimeoutError("fail")  # type: ignore[attr-defined] # noqa: SLF001
     with pytest.raises(TransmissionTimeoutError):
         client._http_query({})  # noqa: SLF001
 
+
 def test_http_query_auth_error(client: Client) -> None:
     client._Client__http_client.request.return_value = mock.Mock(status=401, headers={}, data=b"")  # type: ignore[attr-defined] # noqa: SLF001
     with pytest.raises(TransmissionAuthError):
         client._http_query({})  # noqa: SLF001
+
 
 def test_http_query_too_many_requests(client: Client) -> None:
     conflict_resp = mock.Mock(status=409, headers={"x-transmission-session-id": "new_id"}, data=b"")
@@ -33,10 +37,12 @@ def test_http_query_too_many_requests(client: Client) -> None:
     with pytest.raises(TransmissionError, match="too much request"):
         client._http_query({})  # noqa: SLF001
 
+
 def test_request_invalid_json(client: Client) -> None:
     client._Client__http_client.request.return_value = mock.Mock(status=200, headers={}, data=b"invalid json")  # type: ignore[attr-defined] # noqa: SLF001
     with pytest.raises(TransmissionError, match="failed to parse response"):
         client._request(RpcMethod.TorrentGet)  # noqa: SLF001
+
 
 def test_request_failure_result(client: Client) -> None:
     client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
@@ -45,24 +51,26 @@ def test_request_failure_result(client: Client) -> None:
     with pytest.raises(TransmissionError, match='Query failed with result "failure"'):
         client._request(RpcMethod.TorrentGet)  # noqa: SLF001
 
-def test_json_decode_error():
+
+def test_json_decode_error() -> None:
     """Cover JSON decode error handling in _request"""
     # Patch get_session so init doesn't make network calls
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         # Mock _http_query to return non-json string
         # We need to mock the instance method on the created instance 'c'
-        c._http_query = mock.Mock(return_value="not json")
+        c._http_query = mock.Mock(return_value="not json")  # type: ignore[method-assign]
         # We need a logger mock
         c.logger = mock.Mock()
 
         # Now call _request
         with pytest.raises(TransmissionError) as excinfo:
-            c._request("method")
+            c._request("method")  # type: ignore[arg-type]
         assert "failed to parse response as json" in str(excinfo.value)
         c.logger.exception.assert_called()
 
-def test_request_errors():
+
+def test_request_errors() -> None:
     """Cover _request type checking and logic"""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
@@ -78,9 +86,10 @@ def test_request_errors():
 
         # Require ids
         with pytest.raises(ValueError, match="request require ids"):
-            c._request(method="m", require_ids=True)
+            c._request(method="m", require_ids=True)  # type: ignore[arg-type]
 
-def test_request_response_logic():
+
+def test_request_response_logic() -> None:
     """Cover response parsing logic"""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
@@ -90,8 +99,8 @@ def test_request_response_logic():
 
         # Mock _http_query
         # 1. Missing result
-        c._http_query = mock.Mock(return_value=json.dumps({"arguments": {}}))
+        c._http_query = mock.Mock(return_value=json.dumps({"arguments": {}}))  # type: ignore[method-assign]
         with pytest.raises(TransmissionError, match="missing without result"):
-            c._request("method")
+            c._request("method")  # type: ignore[arg-type]
 
         c.logger.debug.assert_called()

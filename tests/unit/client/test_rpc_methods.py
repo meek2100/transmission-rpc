@@ -7,9 +7,11 @@ from typing import Any
 from transmission_rpc.client import Client
 from transmission_rpc.error import TransmissionError
 
+
 def test_start_torrent_no_ids(client: Client) -> None:
     with pytest.raises(ValueError, match="request require ids"):
         client.start_torrent(ids=[])
+
 
 def test_start_all_bypass_queue(client: Client) -> None:
     client._Client__http_client.request.reset_mock()  # type: ignore[attr-defined]
@@ -25,12 +27,14 @@ def test_start_all_bypass_queue(client: Client) -> None:
     ]
     client.start_all(bypass_queue=True)
 
+
 def test_get_torrent_with_args(client: Client) -> None:
-    client._Client__http_client.request.return_value.data = json.dumps(
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
         {"result": "success", "arguments": {"torrents": []}}
-    ).encode()  # type: ignore[attr-defined]
+    ).encode()
     with pytest.raises(KeyError):
         client.get_torrent(1, arguments=["id", "name"])
+
 
 def test_change_torrent_warnings_full(client: Client) -> None:
     client._Client__protocol_version = 1  # type: ignore[attr-defined]
@@ -42,9 +46,11 @@ def test_change_torrent_warnings_full(client: Client) -> None:
         client.change_torrent(ids=1, group="g")
         mock_warn.assert_called()
 
+
 def test_change_torrent_no_args(client: Client) -> None:
     with pytest.raises(ValueError, match="No arguments to set"):
         client.change_torrent(ids=1)
+
 
 def test_set_session_warnings_full(client: Client) -> None:
     client._Client__protocol_version = 1  # type: ignore[attr-defined]
@@ -62,6 +68,7 @@ def test_set_session_warnings_full(client: Client) -> None:
         client.set_session(script_torrent_added_filename="f")
         mock_warn.assert_called()
 
+
 def test_set_group_warning(client: Client) -> None:
     client._Client__protocol_version = 1  # type: ignore[attr-defined]
     client._Client__http_client.request.return_value.data = json.dumps({"result": "success", "arguments": {}}).encode()  # type: ignore[attr-defined]
@@ -69,22 +76,24 @@ def test_set_group_warning(client: Client) -> None:
         client.set_group("g")
         mock_warn.assert_called()
 
-def test_file_scheme_error():
+
+def test_file_scheme_error() -> None:
     """Cover usage of file:// scheme error"""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         with pytest.raises(ValueError, match="support for `file://` URL has been removed"):
             c.add_torrent("file:///tmp/test.torrent")
 
-def test_change_torrent_warnings():
+
+def test_change_torrent_warnings() -> None:
     """Cover warnings for new RPC features"""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         # Mock internal request method
-        c._request = mock.Mock()
-        c.logger = mock.Mock()
+        c._request = mock.Mock()  # type: ignore[method-assign]
+        c.logger = mock.Mock()  # type: ignore[method-assign]
         # Mock _rpc_version_warning to verify calls
-        c._rpc_version_warning = mock.Mock()
+        c._rpc_version_warning = mock.Mock()  # type: ignore[method-assign]
 
         # Test labels warning (v16)
         c.change_torrent(ids=1, labels=["a"])
@@ -98,12 +107,13 @@ def test_change_torrent_warnings():
         c.change_torrent(ids=1, tracker_list=[["a"]])
         c._rpc_version_warning.assert_any_call(17)
 
-def test_groups_coverage():
+
+def test_groups_coverage() -> None:
     """Cover set_group and get_groups which are skipped on older servers"""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         # We need to mock _request to return something valid
-        c._request = mock.Mock(return_value={"group": [{"name": "test_g"}]})
+        c._request = mock.Mock(return_value={"group": [{"name": "test_g"}]})  # type: ignore[method-assign]
 
         # Test set_group
         c.set_group("test_g")
@@ -115,6 +125,7 @@ def test_groups_coverage():
 
         # Test get_group
         g = c.get_group("test_g")
+        assert g is not None
         assert g.name == "test_g"
 
         # Test get_group missing
@@ -125,11 +136,12 @@ def test_groups_coverage():
         c.get_groups(["test_g"])
         c._request.assert_called_with(mock.ANY, {"group": ["test_g"]}, timeout=None)
 
-def test_more_client_methods_rpc():
+
+def test_more_client_methods_rpc() -> None:
     """Cover remaining client methods (RPC parts)"""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
-        c._request = mock.Mock()
+        c._request = mock.Mock()  # type: ignore[method-assign]
 
         # start_all bypass_queue
         c._request.return_value = {"torrents": []}
@@ -146,20 +158,22 @@ def test_more_client_methods_rpc():
         c._request.return_value = {"blocklist-size": 10}
         assert c.blocklist_update() == 10
 
-def test_add_torrent_args():
+
+def test_add_torrent_args() -> None:
     """Cover add_torrent args"""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
-        c._request = mock.Mock(return_value={"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
+        c._request = mock.Mock(return_value={"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})  # type: ignore[method-assign]
 
         # labels, sequential_download, bandwidthPriority
         c.add_torrent("magnet:?xt=urn:btih:a", labels=["l"], sequential_download=True, bandwidthPriority=1)
 
-def test_even_more_coverage():
+
+def test_even_more_coverage() -> None:
     """Cover remaining lines"""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
-        c._request = mock.Mock()
+        c._request = mock.Mock()  # type: ignore[method-assign]
 
         # set_session invalid encryption
         with pytest.raises(ValueError, match="Invalid encryption value"):
@@ -189,12 +203,13 @@ def test_even_more_coverage():
         c._request.return_value = {"path": "/other", "size-bytes": 0}
         assert c.free_space("/tmp") is None
 
-def test_add_torrent_types():
+
+def test_add_torrent_types() -> None:
     """Cover add_torrent with different input types"""
 
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
-        c._request = mock.Mock(return_value={"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
+        c._request = mock.Mock(return_value={"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})  # type: ignore[method-assign]
 
         # bytes
         c.add_torrent(b"torrent content")
@@ -212,11 +227,12 @@ def test_add_torrent_types():
             c.add_torrent(p)
         assert "metainfo" in c._request.call_args[0][1]
 
-def test_final_straw():
+
+def test_final_straw() -> None:
     """Cover the last few lines"""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
-        c._request = mock.Mock()
+        c._request = mock.Mock()  # type: ignore[method-assign]
 
         # 489: empty metadata
         with pytest.raises(ValueError, match="Torrent metadata is empty"):
@@ -248,7 +264,7 @@ def test_final_straw():
         c2.logger = mock.Mock()
 
         # 1. SessionStats fallback (358)
-        c2._http_query = mock.Mock(
+        c2._http_query = mock.Mock(  # type: ignore[method-assign]
             return_value=json.dumps({"result": "success", "arguments": {"activeTorrentCount": 1}})
         )
         stats = c2.session_stats()
@@ -269,6 +285,7 @@ def test_final_straw():
         t = c2.get_torrent(1)
         assert t.id == 1
 
+
 def test_add_torrent_duplicate(client: Client) -> None:
     client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
@@ -280,6 +297,7 @@ def test_add_torrent_duplicate(client: Client) -> None:
     res = client.add_torrent("magnet:?xt=urn:btih:hash")
     assert res.id == 1
 
+
 def test_add_torrent_invalid_response(client: Client) -> None:
     client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
@@ -287,12 +305,14 @@ def test_add_torrent_invalid_response(client: Client) -> None:
     with pytest.raises(TransmissionError, match="Invalid torrent-add response"):
         client.add_torrent("magnet:?xt=urn:btih:hash")
 
+
 def test_get_torrent_not_found(client: Client) -> None:
     client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"torrents": []}}).encode()
     )
     with pytest.raises(KeyError, match="Torrent not found"):
         client.get_torrent(1)
+
 
 def test_session_stats_legacy(client: Client) -> None:
     client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
@@ -317,6 +337,7 @@ def test_session_stats_legacy(client: Client) -> None:
     )
     assert client.session_stats().active_torrent_count == 5
 
+
 def test_free_space_path_mismatch(client: Client) -> None:
     client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
@@ -325,15 +346,17 @@ def test_free_space_path_mismatch(client: Client) -> None:
     )
     assert client.free_space("/test") is None
 
+
 def test_get_group_none(client: Client) -> None:
     client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"group": []}}).encode()
     )
     assert client.get_group("test") is None
 
+
 def test_client_void_methods(client: Client) -> None:
     # Set default success response
-    client._Client__http_client.request.return_value.data = json.dumps(
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
         {  # type: ignore[attr-defined]
             "result": "success",
             "arguments": {},
@@ -358,8 +381,9 @@ def test_client_void_methods(client: Client) -> None:
     for method_name, kwargs in methods:
         getattr(client, method_name)(**kwargs)
 
+
 def test_change_torrent(client: Client) -> None:
-    client._Client__http_client.request.return_value.data = json.dumps(
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
         {  # type: ignore[attr-defined]
             "result": "success",
             "arguments": {},
@@ -367,8 +391,9 @@ def test_change_torrent(client: Client) -> None:
     ).encode()
     client.change_torrent(ids=1, download_limit=100)
 
+
 def test_rename_torrent_path(client: Client) -> None:
-    client._Client__http_client.request.return_value.data = json.dumps(
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
         {  # type: ignore[attr-defined]
             "result": "success",
             "arguments": {"path": "/a", "name": "b"},
@@ -376,8 +401,9 @@ def test_rename_torrent_path(client: Client) -> None:
     ).encode()
     client.rename_torrent_path(1, "/path", "name")
 
+
 def test_blocklist_update_extended(client: Client) -> None:
-    client._Client__http_client.request.return_value.data = json.dumps(
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
         {  # type: ignore[attr-defined]
             "result": "success",
             "arguments": {"blocklist-size": 10},
@@ -385,8 +411,9 @@ def test_blocklist_update_extended(client: Client) -> None:
     ).encode()
     assert client.blocklist_update() == 10
 
+
 def test_port_test(client: Client) -> None:
-    client._Client__http_client.request.return_value.data = json.dumps(
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
         {  # type: ignore[attr-defined]
             "result": "success",
             "arguments": {"port-is-open": True, "ip_protocol": "ipv4"},
@@ -394,8 +421,9 @@ def test_port_test(client: Client) -> None:
     ).encode()
     assert client.port_test().port_is_open is True
 
+
 def test_get_recently_active_torrents_extended(client: Client) -> None:
-    client._Client__http_client.request.return_value.data = json.dumps(
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
         {  # type: ignore[attr-defined]
             "result": "success",
             "arguments": {"torrents": [], "removed": []},
@@ -403,14 +431,16 @@ def test_get_recently_active_torrents_extended(client: Client) -> None:
     ).encode()
     client.get_recently_active_torrents()
 
+
 def test_get_groups_extended(client: Client) -> None:
-    client._Client__http_client.request.return_value.data = json.dumps(
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
         {  # type: ignore[attr-defined]
             "result": "success",
             "arguments": {"group": []},
         }
     ).encode()
     client.get_groups()
+
 
 def test_start_all_extended(client: Client) -> None:
     client._Client__http_client.request.reset_mock()  # type: ignore[attr-defined]
@@ -440,12 +470,14 @@ def test_start_all_extended(client: Client) -> None:
     # The last call should be start.
     assert client._Client__http_client.request.call_count == 2  # type: ignore[attr-defined]
 
+
 def test_rpc_version_warning(client: Client) -> None:
     # Set low protocol version
     client._Client__protocol_version = 1  # type: ignore[attr-defined]
     with mock.patch.object(client.logger, "warning") as mock_warn:
         client._rpc_version_warning(2)
         mock_warn.assert_called()
+
 
 def test_set_session_warnings_extended(client: Client) -> None:
     client._Client__protocol_version = 16  # type: ignore[attr-defined]
@@ -454,9 +486,42 @@ def test_set_session_warnings_extended(client: Client) -> None:
         client.set_session(default_trackers=["a"])
         mock_warn.assert_called()
 
+
 def test_change_torrent_warnings_extended(client: Client) -> None:
     client._Client__protocol_version = 15  # type: ignore[attr-defined]
     client._Client__http_client.request.return_value.data = json.dumps({"result": "success", "arguments": {}}).encode()  # type: ignore[attr-defined]
     with mock.patch.object(client.logger, "warning") as mock_warn:
         client.change_torrent(ids=1, labels=["a"])
         mock_warn.assert_called()
+
+
+def test_parsing_ids(client: Client) -> None:
+    # 75: invalid hex string length
+    with pytest.raises(ValueError, match="not valid torrent id"):
+        client.get_torrent("a")  # length != 40
+
+    # 75: invalid hex string content
+    with pytest.raises(ValueError, match="not valid torrent id"):
+        client.get_torrent("z" * 40)
+
+    # 77: invalid type for _parse_torrent_id (called via get_torrent -> _parse_torrent_ids -> _parse_torrent_id)
+    # Wait, _parse_torrent_ids handles int, str, list.
+    # If list has invalid type?
+    with pytest.raises(ValueError, match="is not valid torrent id"):
+        client.start_torrent(ids=[object()])  # type: ignore
+
+    # 90: valid hash string
+    h = "a" * 40
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+        status=200,
+        headers={},
+        data=json.dumps({"result": "success", "arguments": {"torrents": []}}).encode(),
+    )
+    try:
+        client.get_torrent(h)
+    except KeyError:
+        pass  # Expected since not found, but we want to hit the parsing line
+
+    # 93: invalid type for _parse_torrent_ids (e.g. float)
+    with pytest.raises(ValueError, match="Invalid torrent id"):
+        client.start_torrent(ids=1.5)  # type: ignore

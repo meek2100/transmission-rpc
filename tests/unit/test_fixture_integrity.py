@@ -4,9 +4,8 @@ from unittest import mock
 from tests.conftest import ensure_transmission_running, tr_client, fake_hash_factory
 from transmission_rpc.client import Client
 
-def test_conftest_timeout():
-    from tests.conftest import ensure_transmission_running
 
+def test_conftest_timeout() -> None:
     # Unwrap fixture
     func = ensure_transmission_running
     while hasattr(func, "__wrapped__"):
@@ -20,9 +19,8 @@ def test_conftest_timeout():
         with mock.patch("time.time", side_effect=[0, 31]), pytest.raises(ConnectionError, match="timeout"):
             func()
 
-def test_tr_client_fixture():
-    from tests.conftest import tr_client
 
+def test_tr_client_fixture() -> None:
     # tr_client is a fixture. access wrapped
     func = tr_client
     while hasattr(func, "__wrapped__"):
@@ -44,9 +42,8 @@ def test_tr_client_fixture():
         # Verify remove_torrent called again
         assert c.remove_torrent.call_count == 2
 
-def test_conftest_success():
-    from tests.conftest import ensure_transmission_running
 
+def test_conftest_success() -> None:
     func = ensure_transmission_running
     while hasattr(func, "__wrapped__"):
         func = func.__wrapped__
@@ -57,9 +54,8 @@ def test_conftest_success():
         # Verify connect called
         mock_sock.return_value.__enter__.return_value.connect.assert_called()
 
-def test_fake_hash_factory():
-    from tests.conftest import fake_hash_factory
 
+def test_fake_hash_factory() -> None:
     func = fake_hash_factory
     while hasattr(func, "__wrapped__"):
         func = func.__wrapped__

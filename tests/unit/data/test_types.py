@@ -7,32 +7,39 @@ from transmission_rpc.torrent import Peer, PeersFrom, Tracker, TrackerStats
 from transmission_rpc.constants import Args, Type, get_torrent_arguments
 from transmission_rpc.error import TransmissionError
 
+
 def check_properties(cls: type, obj: Any) -> None:
     for prop in dir(cls):
         if isinstance(getattr(cls, prop), property):
             with contextlib.suppress(KeyError, DeprecationWarning):
                 getattr(obj, prop)
 
+
 def test_container_repr() -> None:
     """Test Container.__repr__ which is missing coverage."""
     c = Container(fields={"key": "value"})
     assert repr(c) == "<Container fields={'key': 'value'}>"
 
+
 def test_peer_properties_access() -> None:
     p = Peer(fields={})
     check_properties(Peer, p)
+
 
 def test_peers_from_properties_access() -> None:
     p = PeersFrom(fields={})
     check_properties(PeersFrom, p)
 
+
 def test_tracker_properties_access() -> None:
     t = Tracker(fields={})
     check_properties(Tracker, t)
 
+
 def test_tracker_stats_properties_access() -> None:
     t = TrackerStats(fields={})
     check_properties(TrackerStats, t)
+
 
 def test_group_properties() -> None:
     fields = {
@@ -51,11 +58,13 @@ def test_group_properties() -> None:
     assert g.speed_limit_up_enabled is False
     assert g.speed_limit_up == 100
 
+
 def test_port_test_result_properties() -> None:
     fields = {"port-is-open": True, "ip_protocol": "ipv4"}
     r = PortTestResult(fields=fields)
     assert r.port_is_open is True
     assert r.ip_protocol == "ipv4"
+
 
 def test_bitmap() -> None:
     # 1 byte: 10101010 -> 0xAA.
@@ -69,15 +78,18 @@ def test_bitmap() -> None:
     assert b.get(7) is False
     assert b.get(8) is False  # out of bounds
 
+
 def test_args_repr_str() -> None:
     arg = Args(Type.number, 1, description="desc")
     assert repr(arg) == "Args('number', 1, None, None, None, 'desc')"
     assert str(arg) == "Args<type=number, 1, description='desc')"
 
+
 def test_get_torrent_arguments() -> None:
     args = get_torrent_arguments(1)
     assert "id" in args
     assert "group" not in args  # added in 17
+
 
 def test_error_str_with_original() -> None:
     original = mock.Mock()
@@ -85,6 +97,7 @@ def test_error_str_with_original() -> None:
     type(original).__name__ = "OriginalError"
     err = TransmissionError("message", original=original)
     assert str(err) == 'message Original exception: OriginalError, "original error"'
+
 
 def test_deprecated_raw_response() -> None:
     err = TransmissionError("message", raw_response="raw")

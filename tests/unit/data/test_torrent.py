@@ -3,11 +3,13 @@ import contextlib
 from typing import Any
 from transmission_rpc.torrent import Torrent, Status, FileStat, Peer, PeersFrom, Tracker, TrackerStats, get_status
 
+
 def check_properties(cls: type, obj: Any) -> None:
     for prop in dir(cls):
         if isinstance(getattr(cls, prop), property):
             with contextlib.suppress(KeyError, DeprecationWarning):
                 getattr(obj, prop)
+
 
 def test_torrent_missing_optional_fields() -> None:
     # files present but priorities/wanted missing
@@ -21,6 +23,7 @@ def test_torrent_missing_optional_fields() -> None:
     assert len(t.get_files()) == 1
     assert t.get_files()[0].priority is None
     assert t.get_files()[0].selected is None
+
 
 def test_torrent_status_properties() -> None:
     s = Status("checking")
@@ -37,6 +40,7 @@ def test_torrent_status_properties() -> None:
     s = Status("seed pending")
     assert s.seed_pending
 
+
 def test_torrent_misc_properties() -> None:
     fields = {
         "id": 1,
@@ -47,7 +51,8 @@ def test_torrent_misc_properties() -> None:
     assert t.seed_idle_mode.value == 0
     assert t._status_str == "downloading"
 
-def test_torrent_methods_and_props():
+
+def test_torrent_methods_and_props() -> None:
     """Cover misc torrent methods and properties"""
     fields = {
         "id": 1,
@@ -174,13 +179,16 @@ def test_torrent_methods_and_props():
     with pytest.raises(ValueError, match="requires field 'id'"):
         Torrent(fields={})
 
+
 def test_torrent_properties_access() -> None:
     t = Torrent(fields={"id": 1})
     check_properties(Torrent, t)
 
+
 def test_file_stat_properties_access() -> None:
     f = FileStat(fields={})
     check_properties(FileStat, f)
+
 
 def test_status_properties_full() -> None:
     s = Status("stopped")
@@ -189,6 +197,7 @@ def test_status_properties_full() -> None:
     assert str(s) == "stopped"
 
     check_properties(Status, s)
+
 
 def test_torrent_rich_fields() -> None:
     fields = {
@@ -227,6 +236,7 @@ def test_torrent_rich_fields() -> None:
     assert str(t.eta) == "1:00:00"
     assert str(t.eta_idle) == "0:01:00"
     assert t.done_date is not None
+
 
 def test_status_unknown() -> None:
     assert get_status(999) == "unknown status 999"
