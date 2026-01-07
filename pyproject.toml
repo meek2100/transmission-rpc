@@ -59,7 +59,7 @@ show_missing = true
 addopts = '-rav -Werror'
 
 [tool.mypy]
-python_version = "3.14"
+python_version = "3.10"
 strict = true
 disallow_untyped_defs = true
 ignore_missing_imports = true
@@ -113,7 +113,7 @@ select = [
     "YTT",
     "UP",
     "FA100",
-    "FA102"
+    "FA102",
 ]
 extend-fixable = ['UP']
 ignore = [
@@ -154,7 +154,7 @@ ignore = [
 root = '.'
 include = ['./transmission_rpc/']
 ignore = ['./tests/', './docs/']
-pythonVersion = '3.14'
+pythonVersion = '3.10'
 pythonPlatform = 'Linux'
 typeCheckingMode = "strict"
 # reportUnnecessaryComparison = false
