@@ -158,7 +158,7 @@ def test_torrent_methods_and_props() -> None:
     assert t.format_eta() == "0 01:00:00"
 
     # Deprecated into_hash
-    with pytest.warns(DeprecationWarning, match="into_hash"):
+    with pytest.warns(DeprecationWarning, match="typo"):
         assert t.into_hash == "hash"
 
     # get_files defaults (when priorities/wanted are missing)
