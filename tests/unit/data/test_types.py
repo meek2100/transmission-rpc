@@ -1,11 +1,13 @@
-import pytest
 import contextlib
 from typing import Any
 from unittest import mock
-from transmission_rpc.types import BitMap, Group, PortTestResult, Container
-from transmission_rpc.torrent import Peer, PeersFrom, Tracker, TrackerStats
+
+import pytest
+
 from transmission_rpc.constants import Args, Type, get_torrent_arguments
 from transmission_rpc.error import TransmissionError
+from transmission_rpc.torrent import Peer, PeersFrom, Tracker, TrackerStats
+from transmission_rpc.types import BitMap, Container, Group, PortTestResult
 
 
 def check_properties(cls: type, obj: Any) -> None:

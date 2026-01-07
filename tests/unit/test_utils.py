@@ -1,13 +1,15 @@
-import pytest
 import pathlib
+
+import pytest
+
+from tests.util import ServerTooLowError, skip_on
 from transmission_rpc.client import (
-    remove_unset_value,
     _single_str_as_list,
+    _try_read_torrent,
     ensure_location_str,
     list_or_none,
-    _try_read_torrent,
+    remove_unset_value,
 )
-from tests.util import ServerTooLowError, skip_on
 
 
 def test_remove_unset_value() -> None:
@@ -29,7 +31,7 @@ def test_ensure_location_str() -> None:
 def test_ensure_location_str_error() -> None:
     """Cover ensure_location_str relative path error"""
     p = pathlib.Path("relative/path")
-    with pytest.raises(ValueError, match="using relative `pathlib.Path`"):
+    with pytest.raises(ValueError, match=r"using relative `pathlib.Path`"):
         ensure_location_str(p)
 
 

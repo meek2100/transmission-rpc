@@ -1,7 +1,10 @@
-import pytest
+# ruff: noqa: SLF001
 import contextlib
 from typing import Any
-from transmission_rpc.torrent import Torrent, Status, FileStat, Peer, PeersFrom, Tracker, TrackerStats, get_status
+
+import pytest
+
+from transmission_rpc.torrent import FileStat, Status, Torrent, get_status
 
 
 def check_properties(cls: type, obj: Any) -> None:
@@ -155,7 +158,7 @@ def test_torrent_methods_and_props() -> None:
     assert t.format_eta() == "0 01:00:00"
 
     # Deprecated into_hash
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match="into_hash"):
         assert t.into_hash == "hash"
 
     # get_files defaults (when priorities/wanted are missing)

@@ -1,7 +1,6 @@
-import pytest
 import contextlib
 from typing import Any
-from unittest import mock
+
 from transmission_rpc.session import Session, SessionStats, Stats, Units
 
 

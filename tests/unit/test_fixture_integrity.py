@@ -1,8 +1,9 @@
-import pytest
 import contextlib
 from unittest import mock
-from tests.conftest import ensure_transmission_running, tr_client, fake_hash_factory
-from transmission_rpc.client import Client
+
+import pytest
+
+from tests.conftest import ensure_transmission_running, fake_hash_factory, tr_client
 
 
 def test_conftest_timeout() -> None:

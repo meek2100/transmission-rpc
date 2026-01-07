@@ -1,8 +1,10 @@
+# ruff: noqa: SLF001
 import json
+from unittest import mock
+
 import pytest
 import urllib3
-from unittest import mock
-from typing import Any
+
 from transmission_rpc.client import Client
 from transmission_rpc.constants import RpcMethod
 from transmission_rpc.error import (
@@ -14,42 +16,42 @@ from transmission_rpc.error import (
 
 
 def test_http_query_connection_error(client: Client) -> None:
-    client._Client__http_client.request.side_effect = urllib3.exceptions.ConnectionError("fail")  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.side_effect = urllib3.exceptions.ConnectionError("fail")  # type: ignore[attr-defined]
     with pytest.raises(TransmissionConnectError):
-        client._http_query({})  # noqa: SLF001
+        client._http_query({})
 
 
 def test_http_query_timeout_error(client: Client) -> None:
-    client._Client__http_client.request.side_effect = urllib3.exceptions.TimeoutError("fail")  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.side_effect = urllib3.exceptions.TimeoutError("fail")  # type: ignore[attr-defined]
     with pytest.raises(TransmissionTimeoutError):
-        client._http_query({})  # noqa: SLF001
+        client._http_query({})
 
 
 def test_http_query_auth_error(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(status=401, headers={}, data=b"")  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.return_value = mock.Mock(status=401, headers={}, data=b"")  # type: ignore[attr-defined]
     with pytest.raises(TransmissionAuthError):
-        client._http_query({})  # noqa: SLF001
+        client._http_query({})
 
 
 def test_http_query_too_many_requests(client: Client) -> None:
     conflict_resp = mock.Mock(status=409, headers={"x-transmission-session-id": "new_id"}, data=b"")
-    client._Client__http_client.request.side_effect = [conflict_resp, conflict_resp, conflict_resp, conflict_resp]  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.side_effect = [conflict_resp, conflict_resp, conflict_resp, conflict_resp]  # type: ignore[attr-defined]
     with pytest.raises(TransmissionError, match="too much request"):
-        client._http_query({})  # noqa: SLF001
+        client._http_query({})
 
 
 def test_request_invalid_json(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(status=200, headers={}, data=b"invalid json")  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.return_value = mock.Mock(status=200, headers={}, data=b"invalid json")  # type: ignore[attr-defined]
     with pytest.raises(TransmissionError, match="failed to parse response"):
-        client._request(RpcMethod.TorrentGet)  # noqa: SLF001
+        client._request(RpcMethod.TorrentGet)
 
 
 def test_request_failure_result(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200, headers={}, data=json.dumps({"result": "failure", "arguments": {}}).encode()
     )
     with pytest.raises(TransmissionError, match='Query failed with result "failure"'):
-        client._request(RpcMethod.TorrentGet)  # noqa: SLF001
+        client._request(RpcMethod.TorrentGet)
 
 
 def test_json_decode_error() -> None:

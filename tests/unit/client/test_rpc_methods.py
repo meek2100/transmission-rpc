@@ -1,9 +1,12 @@
-import json
+# ruff: noqa: SLF001, S108
+import contextlib
 import io
+import json
 import pathlib
-import pytest
 from unittest import mock
-from typing import Any
+
+import pytest
+
 from transmission_rpc.client import Client
 from transmission_rpc.error import TransmissionError
 
@@ -187,7 +190,8 @@ def test_even_more_coverage() -> None:
         c._request.return_value = {"torrents": []}
         c.get_torrents(ids=1, arguments=["name"])
         args = c._request.call_args[0][1]["fields"]
-        assert "name" in args and "id" in args
+        assert "name" in args
+        assert "id" in args
 
         # get_recently_active_torrents with arguments
         c._request.return_value = {"torrents": [], "removed": []}
@@ -287,7 +291,7 @@ def test_final_straw() -> None:
 
 
 def test_add_torrent_duplicate(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200,
         headers={},
         data=json.dumps(
@@ -299,7 +303,7 @@ def test_add_torrent_duplicate(client: Client) -> None:
 
 
 def test_add_torrent_invalid_response(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     with pytest.raises(TransmissionError, match="Invalid torrent-add response"):
@@ -307,7 +311,7 @@ def test_add_torrent_invalid_response(client: Client) -> None:
 
 
 def test_get_torrent_not_found(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"torrents": []}}).encode()
     )
     with pytest.raises(KeyError, match="Torrent not found"):
@@ -315,7 +319,7 @@ def test_get_torrent_not_found(client: Client) -> None:
 
 
 def test_session_stats_legacy(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200,
         headers={},
         data=json.dumps(
@@ -339,7 +343,7 @@ def test_session_stats_legacy(client: Client) -> None:
 
 
 def test_free_space_path_mismatch(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200,
         headers={},
         data=json.dumps({"result": "success", "arguments": {"path": "/other", "size-bytes": 100}}).encode(),
@@ -348,7 +352,7 @@ def test_free_space_path_mismatch(client: Client) -> None:
 
 
 def test_get_group_none(client: Client) -> None:
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"group": []}}).encode()
     )
     assert client.get_group("test") is None
@@ -357,7 +361,7 @@ def test_get_group_none(client: Client) -> None:
 def test_client_void_methods(client: Client) -> None:
     # Set default success response
     client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
-        {  # type: ignore[attr-defined]
+        {
             "result": "success",
             "arguments": {},
         }
@@ -369,7 +373,7 @@ def test_client_void_methods(client: Client) -> None:
         ("stop_torrent", {"ids": 1}),
         ("verify_torrent", {"ids": 1}),
         ("reannounce_torrent", {"ids": 1}),
-        ("move_torrent_data", {"ids": 1, "location": "/tmp"}),  # noqa: S108
+        ("move_torrent_data", {"ids": 1, "location": "/tmp"}),
         ("queue_top", {"ids": 1}),
         ("queue_bottom", {"ids": 1}),
         ("queue_up", {"ids": 1}),
@@ -384,7 +388,7 @@ def test_client_void_methods(client: Client) -> None:
 
 def test_change_torrent(client: Client) -> None:
     client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
-        {  # type: ignore[attr-defined]
+        {
             "result": "success",
             "arguments": {},
         }
@@ -394,7 +398,7 @@ def test_change_torrent(client: Client) -> None:
 
 def test_rename_torrent_path(client: Client) -> None:
     client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
-        {  # type: ignore[attr-defined]
+        {
             "result": "success",
             "arguments": {"path": "/a", "name": "b"},
         }
@@ -404,7 +408,7 @@ def test_rename_torrent_path(client: Client) -> None:
 
 def test_blocklist_update_extended(client: Client) -> None:
     client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
-        {  # type: ignore[attr-defined]
+        {
             "result": "success",
             "arguments": {"blocklist-size": 10},
         }
@@ -414,7 +418,7 @@ def test_blocklist_update_extended(client: Client) -> None:
 
 def test_port_test(client: Client) -> None:
     client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
-        {  # type: ignore[attr-defined]
+        {
             "result": "success",
             "arguments": {"port-is-open": True, "ip_protocol": "ipv4"},
         }
@@ -424,7 +428,7 @@ def test_port_test(client: Client) -> None:
 
 def test_get_recently_active_torrents_extended(client: Client) -> None:
     client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
-        {  # type: ignore[attr-defined]
+        {
             "result": "success",
             "arguments": {"torrents": [], "removed": []},
         }
@@ -434,7 +438,7 @@ def test_get_recently_active_torrents_extended(client: Client) -> None:
 
 def test_get_groups_extended(client: Client) -> None:
     client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
-        {  # type: ignore[attr-defined]
+        {
             "result": "success",
             "arguments": {"group": []},
         }
@@ -517,10 +521,8 @@ def test_parsing_ids(client: Client) -> None:
         headers={},
         data=json.dumps({"result": "success", "arguments": {"torrents": []}}).encode(),
     )
-    try:
+    with contextlib.suppress(KeyError):
         client.get_torrent(h)
-    except KeyError:
-        pass  # Expected since not found, but we want to hit the parsing line
 
     # 93: invalid type for _parse_torrent_ids (e.g. float)
     with pytest.raises(ValueError, match="Invalid torrent id"):

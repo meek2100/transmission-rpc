@@ -1,15 +1,18 @@
+# ruff: noqa: SLF001, S108, S106, PT030
+import importlib
+import json
+import socket
+from typing import Any
+from unittest import mock
+
 import pytest
 import urllib3
-import socket
-import json
-import importlib
-import transmission_rpc.client
-from unittest import mock
-from typing import Any
 from urllib3 import Timeout
-from transmission_rpc.client import Client
+
+import transmission_rpc.client
 from transmission_rpc import from_url
 from transmission_rpc._unix_socket import UnixHTTPConnection, UnixHTTPConnectionPool
+from transmission_rpc.client import Client
 
 
 def test_client_init_invalid_protocol() -> None:
@@ -52,7 +55,7 @@ def test_deprecated_properties(client: Client) -> None:
 
 def test_client_init_no_auth(mock_http_client: Any) -> None:
     c = Client(username=None, password=None)
-    headers = c._Client__auth_headers  # type: ignore[attr-defined] # noqa: SLF001
+    headers = c._Client__auth_headers  # type: ignore[attr-defined]
     assert "Authorization" not in headers
 
 
@@ -200,7 +203,7 @@ def test_from_url_http() -> None:
 def test_from_url_https() -> None:
     # We need to mock HTTPSConnectionPool to avoid certifi errors or connection attempts
     with (
-        mock.patch("transmission_rpc.client.urllib3.HTTPSConnectionPool") as mock_pool,
+        mock.patch("transmission_rpc.client.urllib3.HTTPSConnectionPool"),
         mock.patch.object(Client, "get_session", autospec=True),
     ):
         c = from_url("https://127.0.0.1")
