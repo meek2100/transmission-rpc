@@ -167,7 +167,9 @@ def test_real_add_torrent_fd(tr_client: Client):
     """
     with open("tests/fixtures/iso.torrent", "rb") as f:
         tr_client.add_torrent(f)
-    assert len(tr_client.get_torrents()) == 1, "Transmission daemon should have exactly 1 task after adding torrent file"
+    assert len(tr_client.get_torrents()) == 1, (
+        "Transmission daemon should have exactly 1 task after adding torrent file"
+    )
 
 
 def test_real_add_torrent_http(tr_client: Client):

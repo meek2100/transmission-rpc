@@ -6,8 +6,6 @@ import pytest
 class ServerTooLowError(Exception):
     """Raised when the Transmission server version is too low for a specific feature."""
 
-    pass
-
 
 def skip_on(exception, reason="Default reason"):
     """
