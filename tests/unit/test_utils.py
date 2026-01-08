@@ -2,7 +2,6 @@ import pathlib
 
 import pytest
 
-from tests.util import ServerTooLowError, skip_on
 from transmission_rpc.client import (
     _single_str_as_list,
     _try_read_torrent,
@@ -33,15 +32,6 @@ def test_ensure_location_str_error() -> None:
     p = pathlib.Path("relative/path")
     with pytest.raises(ValueError, match=r"using relative `pathlib.Path`"):
         ensure_location_str(p)
-
-
-def test_util_skip_on() -> None:
-    @skip_on(ServerTooLowError, "reason")  # type: ignore[no-untyped-call, untyped-decorator]
-    def func() -> None:
-        raise ServerTooLowError
-
-    # Calling func should skip
-    func()
 
 
 def test_list_or_none() -> None:
