@@ -51,6 +51,9 @@ dev = [
     'sphinx-autobuild==2025.8.25; python_version >= "3.12"',
 ]
 
+[tool.coverage.run]
+omit = ["tests/*"]
+
 [tool.coverage.report]
 fail_under = 100
 show_missing = true
