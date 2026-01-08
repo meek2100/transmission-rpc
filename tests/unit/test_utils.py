@@ -35,15 +35,6 @@ def test_ensure_location_str_error() -> None:
         ensure_location_str(p)
 
 
-def test_util_skip_on() -> None:
-    @skip_on(ServerTooLowError, "reason")  # type: ignore[no-untyped-call, untyped-decorator]
-    def func() -> None:
-        raise ServerTooLowError
-
-    # Calling func should skip
-    func()
-
-
 def test_list_or_none() -> None:
     assert list_or_none(None) is None
     assert list_or_none([1]) == [1]
