@@ -310,15 +310,3 @@ def test_groups(tr_client: Client):
     groups = tr_client.get_groups()
 
     assert "test.1" in groups, "The set group 'test.1' should be present in the groups list"
-
-
-def test_groups_low_version(tr_client: Client):
-    """
-    Integration test: Verify that checking for group support raises ServerTooLowError on older servers.
-    """
-    # Mock session to have low version
-    with mock.patch.object(tr_client, "get_session") as mock_get:
-        mock_get.return_value.rpc_version = 16
-        with pytest.raises(ServerTooLowError):  # noqa: PT012
-            if tr_client.get_session().rpc_version < 17:
-                raise ServerTooLowError
