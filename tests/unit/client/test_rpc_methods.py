@@ -150,8 +150,11 @@ def test_groups_coverage() -> None:
         c._request.assert_called_with(mock.ANY, {"group": ["test_g"]}, timeout=None)
 
 
-def test_more_client_methods_rpc() -> None:
-    """Cover remaining client methods interacting with RPC (start_all, stop, reannounce, blocklist)."""
+def test_rpc_command_methods() -> None:
+    """
+    Verify execution of client command methods that do not return detailed data,
+    including `start_all`, `stop_torrent`, `reannounce_torrent`, and `blocklist_update`.
+    """
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         c._request = mock.Mock()  # type: ignore[method-assign]
@@ -182,8 +185,11 @@ def test_add_torrent_args() -> None:
         c.add_torrent("magnet:?xt=urn:btih:a", labels=["l"], sequential_download=True, bandwidthPriority=1)
 
 
-def test_even_more_coverage() -> None:
-    """Cover various edge cases and remaining lines in client methods."""
+def test_client_method_edge_cases() -> None:
+    """
+    Verify edge case handling for invalid session encryption values, `start_torrent` queue bypassing,
+    field filtering in `get_torrents`, and path mismatches in `free_space`.
+    """
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         c._request = mock.Mock()  # type: ignore[method-assign]
@@ -242,8 +248,11 @@ def test_add_torrent_types() -> None:
         assert "metainfo" in c._request.call_args[0][1]
 
 
-def test_final_straw() -> None:
-    """Cover the last few lines: empty metadata error, unknown type in add_torrent, and start_all logic."""
+def test_add_torrent_empty_metadata_and_unknown_types() -> None:
+    """
+    Verify that `add_torrent` raises ValueError for empty metadata or unknown input types,
+    and ensure `start_all` correctly handles the `bypass_queue` flag when managing torrents.
+    """
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         c._request = mock.Mock()  # type: ignore[method-assign]
@@ -374,8 +383,11 @@ def test_get_group_none(client: Client) -> None:
     assert client.get_group("test") is None
 
 
-def test_client_void_methods(client: Client) -> None:
-    """Verify that various void methods execute without error when the server returns success."""
+def test_methods_returning_none(client: Client) -> None:
+    """
+    Verify that various client methods (e.g., queue movement, session configuration)
+    execute without error and return None when the server responds with success.
+    """
     # Set default success response
     client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
         {

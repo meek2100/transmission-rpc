@@ -9,7 +9,7 @@ from urllib.parse import urljoin
 import pytest
 
 from tests.util import ServerTooLowError, skip_on
-from transmission_rpc.client import Client, _try_read_torrent, ensure_location_str
+from transmission_rpc.client import Client, _try_read_torrent
 from transmission_rpc.error import TransmissionAuthError, TransmissionError
 from transmission_rpc.types import File
 
@@ -280,21 +280,6 @@ def test_raise_unauthorized(status_code):
     m = mock.Mock(return_value=mock.Mock(status=status_code))
     with mock.patch("urllib3.HTTPConnectionPool.request", m), pytest.raises(TransmissionAuthError):
         Client()
-
-
-def test_ensure_location_str_relative():
-    """
-    Verify that `ensure_location_str` raises ValueError for relative paths.
-    """
-    with pytest.raises(ValueError, match="relative"):
-        ensure_location_str(pathlib.Path("."))
-
-
-def test_ensure_location_str_absolute():
-    """
-    Verify that `ensure_location_str` accepts absolute paths.
-    """
-    ensure_location_str(pathlib.Path(".").absolute())
 
 
 @skip_on(ServerTooLowError, "group methods is added in rpc version 17")

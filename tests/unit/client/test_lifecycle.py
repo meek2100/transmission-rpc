@@ -1,4 +1,6 @@
 # ruff: noqa: SLF001, S108, S106, PT030
+from __future__ import annotations
+
 import importlib
 import json
 import socket
@@ -10,9 +12,70 @@ import urllib3
 from urllib3 import Timeout
 
 import transmission_rpc.client
-from transmission_rpc import from_url
+from transmission_rpc import DEFAULT_TIMEOUT, from_url
 from transmission_rpc._unix_socket import UnixHTTPConnection, UnixHTTPConnectionPool
 from transmission_rpc.client import Client
+from transmission_rpc.constants import LOGGER
+
+
+@pytest.mark.parametrize(
+    ("url", "kwargs"),
+    list(
+        {
+            "http://a:b@127.0.0.1:9092/transmission/rpc": {
+                "protocol": "http",
+                "username": "a",
+                "password": "b",
+                "host": "127.0.0.1",
+                "port": 9092,
+                "path": "/transmission/rpc",
+            },
+            "http://127.0.0.1/transmission/rpc": {
+                "protocol": "http",
+                "username": None,
+                "password": None,
+                "host": "127.0.0.1",
+                "port": 80,
+                "path": "/transmission/rpc",
+            },
+            "https://127.0.0.1/tr/transmission/rpc": {
+                "protocol": "https",
+                "username": None,
+                "password": None,
+                "host": "127.0.0.1",
+                "port": 443,
+                "path": "/tr/transmission/rpc",
+            },
+            "https://127.0.0.1/": {
+                "protocol": "https",
+                "username": None,
+                "password": None,
+                "host": "127.0.0.1",
+                "port": 443,
+                "path": "/",
+            },
+            "http+unix://%2Fvar%2Frun%2Ftransmission.sock/transmission/rpc": {
+                "protocol": "http+unix",
+                "username": None,
+                "password": None,
+                "host": "/var/run/transmission.sock",
+                "port": None,
+                "path": "/transmission/rpc",
+            },
+        }.items()
+    ),
+)
+def test_from_url(url: str, kwargs: dict[str, Any]):
+    """
+    Verify that `from_url` correctly parses URLs and initializes the Client with the expected arguments.
+    """
+    with mock.patch("transmission_rpc.Client") as m:
+        from_url(url)
+        m.assert_called_once_with(
+            **kwargs,
+            timeout=DEFAULT_TIMEOUT,
+            logger=LOGGER,
+        )
 
 
 def test_client_init_invalid_protocol() -> None:
