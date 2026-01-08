@@ -12,22 +12,35 @@ from transmission_rpc.client import (
 
 
 def test_remove_unset_value() -> None:
+    """
+    Verify that `remove_unset_value` removes keys with `None` values from a dictionary.
+    """
     assert remove_unset_value({"a": 1, "b": None}) == {"a": 1}
 
 
 def test_single_str_as_list() -> None:
+    """
+    Verify `_single_str_as_list` converts a single string to a list of that string,
+    keeps lists as is, and returns None for None.
+    """
     assert _single_str_as_list(None) is None
     assert _single_str_as_list("a") == ["a"]
     assert _single_str_as_list(["a"]) == ["a"]
 
 
 def test_ensure_location_str() -> None:
+    """
+    Verify that `ensure_location_str` converts a Path object to a string.
+    """
     # Only test the Path branch as str is trivial
     p = pathlib.Path.cwd() / "tmp"
     assert ensure_location_str(p) == str(p)
 
 
 def test_ensure_location_str_error() -> None:
+    """
+    Verify that `ensure_location_str` raises ValueError if the path is relative.
+    """
     """Cover ensure_location_str relative path error"""
     p = pathlib.Path("relative/path")
     with pytest.raises(ValueError, match=r"using relative `pathlib.Path`"):
@@ -35,11 +48,18 @@ def test_ensure_location_str_error() -> None:
 
 
 def test_list_or_none() -> None:
+    """
+    Verify `list_or_none` converts iterables to lists and returns None for None.
+    """
     assert list_or_none(None) is None
     assert list_or_none([1]) == [1]
     assert list_or_none((1,)) == [1]
 
 
 def test_try_read_torrent_file_url() -> None:
+    """
+    Verify that `_try_read_torrent` raises ValueError when encountering a `file://` URL,
+    as support for it has been removed.
+    """
     with pytest.raises(ValueError, match="support for `file://` URL has been removed"):
         _try_read_torrent("file:///tmp/a.torrent")

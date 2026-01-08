@@ -14,6 +14,7 @@ from transmission_rpc.constants import LOGGER
 
 
 def assert_almost_eq(value: float, expected: float):
+    """Helper to assert that two floats are almost equal (within 1.0)."""
     assert abs(value - expected) < 1
 
 
@@ -30,7 +31,10 @@ def assert_almost_eq(value: float, expected: float):
     }.items(),
 )
 def test_format_timedelta(delta, expected):
-    assert utils.format_timedelta(delta), expected
+    """
+    Verify that `format_timedelta` formats timedelta objects into strings as expected.
+    """
+    assert utils.format_timedelta(delta) == expected, f"format_timedelta({delta}) != {expected}"
 
 
 @pytest.mark.parametrize(
@@ -79,6 +83,9 @@ def test_format_timedelta(delta, expected):
     }.items(),
 )
 def test_from_url(url: str, kwargs: dict[str, Any]):
+    """
+    Verify that `from_url` correctly parses URLs and initializes the Client with the expected arguments.
+    """
     with mock.patch("transmission_rpc.Client") as m:
         from_url(url)
         m.assert_called_once_with(

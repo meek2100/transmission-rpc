@@ -16,16 +16,24 @@ from transmission_rpc.client import Client
 
 
 def test_client_init_invalid_protocol() -> None:
+    """Verify that initializing Client with an invalid protocol raises a ValueError."""
     with pytest.raises(ValueError, match="Unknown protocol"):
         Client(protocol="ftp")  # type: ignore[arg-type]
 
 
 def test_client_init_logger_error() -> None:
+    """Verify that initializing Client with a non-logger object raises a TypeError."""
     with pytest.raises(TypeError, match="logger must be instance"):
         Client(logger="not_a_logger")  # type: ignore[arg-type]
 
 
 def test_timeout_property(client: Client) -> None:
+    """
+    Verify that the 'timeout' property works correctly:
+    - Setting it updates the internal timeout.
+    - Deleting it resets it to the default.
+    - Setting an invalid type raises TypeError.
+    """
     client.timeout = urllib3.Timeout(10.0)
     assert client.timeout is not None
     assert client.timeout.total == 10.0
@@ -37,6 +45,7 @@ def test_timeout_property(client: Client) -> None:
 
 
 def test_deprecated_properties(client: Client) -> None:
+    """Verify that accessing deprecated properties emits a DeprecationWarning."""
     with pytest.warns(DeprecationWarning, match="do not use"):
         _ = client.url
     with pytest.warns(DeprecationWarning, match="do not use"):
@@ -54,12 +63,14 @@ def test_deprecated_properties(client: Client) -> None:
 
 
 def test_client_init_no_auth(mock_http_client: Any) -> None:
+    """Verify that initializing Client without credentials does not set the Authorization header."""
     c = Client(username=None, password=None)
     headers = c._Client__auth_headers  # type: ignore[attr-defined]
     assert "Authorization" not in headers
 
 
 def test_client_init_timeout(mock_http_client: Any) -> None:
+    """Verify that initializing Client with a float or int timeout sets the timeout correctly."""
     c = Client(timeout=10.0)
     assert c.timeout is not None
     assert c.timeout.total == 10.0
@@ -69,6 +80,9 @@ def test_client_init_timeout(mock_http_client: Any) -> None:
 
 
 def test_client_init_timeout_types(mock_http_client: Any) -> None:
+    """
+    Verify that initializing Client with different timeout types (Timeout object, None, invalid) behaves as expected.
+    """
     c = Client(timeout=Timeout(10))
     assert c.timeout is not None
     assert c.timeout.total == 10
@@ -81,12 +95,13 @@ def test_client_init_timeout_types(mock_http_client: Any) -> None:
 
 
 def test_context_manager_error(client: Client) -> None:
+    """Verify that exceptions raised within the Client context manager are propagated."""
     with pytest.raises(ValueError, match="test"), client:
         raise ValueError("test")
 
 
 def test_http_unix_init() -> None:
-    """Cover initialization of http+unix protocol"""
+    """Cover initialization of http+unix protocol to ensure correct URL construction."""
     with (
         mock.patch("transmission_rpc.client.UnixHTTPConnectionPool"),
         mock.patch.object(Client, "get_session", autospec=True),
@@ -96,7 +111,7 @@ def test_http_unix_init() -> None:
 
 
 def test_import_error_version() -> None:
-    """Cover the ImportError block for version retrieval"""
+    """Cover the ImportError block for version retrieval to ensure fallback to 'develop'."""
     with mock.patch("importlib.metadata.version", side_effect=ImportError):
         importlib.reload(transmission_rpc.client)
         assert transmission_rpc.client.__version__ == "develop"
@@ -105,7 +120,7 @@ def test_import_error_version() -> None:
 
 
 def test_deprecated_client_properties() -> None:
-    """Cover deprecated properties"""
+    """Cover deprecated properties to ensure they return the expected values and emit warnings."""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         # Manually set private attributes that are usually set in init/get_session
@@ -129,6 +144,7 @@ def test_deprecated_client_properties() -> None:
 
 
 def test_timeout_property_mocked() -> None:
+    """Verify timeout property behavior with mocked session to isolate logic."""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client(timeout=10)
         assert isinstance(c.timeout, Timeout)
@@ -144,7 +160,7 @@ def test_timeout_property_mocked() -> None:
 
 
 def test_client_init_variations() -> None:
-    """Cover Client init branches"""
+    """Cover Client init branches including timeout=None, path correction, and HTTPS protocol."""
     with mock.patch.object(Client, "get_session", autospec=True):
         # timeout=None
         c = Client(timeout=None)
@@ -169,7 +185,7 @@ def test_client_init_variations() -> None:
 
 
 def test_more_client_methods_lifecycle() -> None:
-    """Cover remaining client methods (lifecycle parts)"""
+    """Cover remaining client methods (lifecycle parts) like session_close and context manager behavior."""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         c._request = mock.Mock()  # type: ignore[method-assign] # Needed because session_close calls it
@@ -185,22 +201,26 @@ def test_more_client_methods_lifecycle() -> None:
 
 
 def test_from_url_invalid_scheme() -> None:
+    """Verify `from_url` raises ValueError for unknown URL schemes."""
     with pytest.raises(ValueError, match="unknown url scheme"):
         from_url("ftp://127.0.0.1")
 
 
 def test_from_url_http_unix_no_host() -> None:
+    """Verify `from_url` raises ValueError for http+unix URLs missing the socket path."""
     with pytest.raises(ValueError, match=r"http\+unix URL is missing Unix socket path"):
         from_url("http+unix://")
 
 
 def test_from_url_http() -> None:
+    """Verify `from_url` correctly parses standard HTTP URLs."""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = from_url("http://127.0.0.1")
         assert ":80" in c._url
 
 
 def test_from_url_https() -> None:
+    """Verify `from_url` correctly parses HTTPS URLs."""
     # We need to mock HTTPSConnectionPool to avoid certifi errors or connection attempts
     with (
         mock.patch("transmission_rpc.client.urllib3.HTTPSConnectionPool"),
@@ -211,6 +231,7 @@ def test_from_url_https() -> None:
 
 
 def test_from_url_http_unix() -> None:
+    """Verify `from_url` correctly parses http+unix URLs."""
     with (
         mock.patch("transmission_rpc.client.UnixHTTPConnectionPool"),
         mock.patch.object(Client, "get_session", autospec=True),
@@ -221,6 +242,7 @@ def test_from_url_http_unix() -> None:
 
 
 def test_unix_http_connection() -> None:
+    """Verify `UnixHTTPConnection` connects to the correct socket path."""
     conn = UnixHTTPConnection("/tmp/sock")
     with (
         mock.patch("socket.socket") as mock_socket_cls,
@@ -232,6 +254,7 @@ def test_unix_http_connection() -> None:
 
 
 def test_unix_http_connection_options() -> None:
+    """Verify `UnixHTTPConnection` respects socket options and timeouts."""
     # Test with socket options and timeout
     conn = UnixHTTPConnection(
         "/tmp/sock",
@@ -250,11 +273,13 @@ def test_unix_http_connection_options() -> None:
 
 
 def test_unix_http_connection_pool_str() -> None:
+    """Verify `UnixHTTPConnectionPool` string representation."""
     pool = UnixHTTPConnectionPool(host="/tmp/sock")
     assert str(pool) == "UnixHTTPConnectionPool(host=/tmp/sock)"
 
 
 def test_context_manager_mocked() -> None:
+    """Verify that the Client properly closes connections when used as a context manager."""
     with mock.patch("transmission_rpc.client.urllib3.HTTPConnectionPool") as m:
         m.return_value.request.return_value = mock.Mock(
             status=200,

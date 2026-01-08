@@ -11,17 +11,24 @@ from transmission_rpc.torrent import Status
 
 
 def test_initial():
+    """
+    Verify that initializing a Torrent object requires the 'id' field.
+    """
     with pytest.raises(ValueError, match="Torrent object requires field 'id'"):
         transmission_rpc.Torrent(fields={})
     transmission_rpc.Torrent(fields={"id": 42})
 
 
 def assert_property_exception(exception, ob, prop):
+    """Helper to assert that accessing a property raises a specific exception."""
     with pytest.raises(exception):
         getattr(ob, prop)
 
 
 def test_non_active():
+    """
+    Verify that a Torrent object correctly handles the 'activityDate' field being 0 (non-active).
+    """
     data = {
         "id": 1,
         "activityDate": 0,
@@ -32,6 +39,10 @@ def test_non_active():
 
 
 def test_attributes():
+    """
+    Verify that Torrent attributes are correctly populated from the 'fields' dictionary
+    and that accessing missing fields raises KeyError.
+    """
     torrent = transmission_rpc.Torrent(fields={"id": 42})
     assert torrent.id == 42
     assert_property_exception(KeyError, torrent, "status")
@@ -99,6 +110,9 @@ def test_attributes():
 
 
 def test_status():
+    """
+    Verify the Status class behaves correctly, including property checks and string representation.
+    """
     assert Status("downloading").downloading
     assert not Status("downloading").download_pending
     assert Status("download pending").download_pending
