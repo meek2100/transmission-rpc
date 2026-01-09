@@ -14,7 +14,6 @@ def hash_to_magnet(h: str) -> str:
 
 torrent_hash = "e84213a794f3ccd890382a54a64ca68b7e925433"
 magnet_url = f"magnet:?xt=urn:btih:{torrent_hash}"
-torrent_hash2 = "9fc20b9e98ea98b4a35e6223041a5ef94ea27809"
 torrent_url = "https://github.com/trim21/transmission-rpc/raw/v4.1.0/tests/fixtures/iso.torrent"
 
 
@@ -67,7 +66,7 @@ def test_real_stop(tr_client: Client, fake_hash_factory: object) -> None:
     assert ret, "Torrent status should eventually become 'stopped'"
 
 
-def test_real_torrent_start_all(tr_client: Client, fake_hash_factory: object) -> None:
+def test_real_torrent_start_all(tr_client: Client) -> None:
     """
     Integration test: Verify `start_all` starts all paused torrents.
     """
