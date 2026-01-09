@@ -4,8 +4,9 @@ from __future__ import annotations
 import importlib
 import json
 import socket
-from typing import Any
+from typing import Any, Literal
 from unittest import mock
+from urllib.parse import urljoin
 
 import pytest
 import urllib3
@@ -16,6 +17,7 @@ from transmission_rpc import DEFAULT_TIMEOUT, from_url
 from transmission_rpc._unix_socket import UnixHTTPConnection, UnixHTTPConnectionPool
 from transmission_rpc.client import Client
 from transmission_rpc.constants import LOGGER
+from transmission_rpc.error import TransmissionAuthError
 
 
 @pytest.mark.parametrize(
@@ -65,7 +67,7 @@ from transmission_rpc.constants import LOGGER
         }.items()
     ),
 )
-def test_from_url(url: str, kwargs: dict[str, Any]):
+def test_from_url(url: str, kwargs: dict[str, Any]) -> None:
     """
     Verify that `from_url` correctly parses URLs and initializes the Client with the expected arguments.
     """
@@ -358,3 +360,59 @@ def test_context_manager_mocked() -> None:
         with Client():
             pass
         m.return_value.close.assert_called()
+
+
+@pytest.mark.parametrize(
+    ("protocol", "username", "password", "host", "port", "path"),
+    [
+        (
+            "https",
+            "a+2da/s a?s=d$",
+            "a@as +@45/:&*^",
+            "127.0.0.1",
+            2333,
+            "/transmission/",
+        ),
+        (
+            "http",
+            "/",
+            None,
+            "127.0.0.1",
+            2333,
+            "/transmission/",
+        ),
+    ],
+)
+def test_client_parse_url(
+    protocol: Literal["http", "https"], username: str, password: str | None, host: str, port: int, path: str
+) -> None:
+    """
+    Verify that the Client correctly parses the URL from the given parameters.
+    """
+    with (
+        mock.patch.object(Client, "_request"),
+        mock.patch.object(Client, "get_session"),
+    ):
+        client = Client(
+            protocol=protocol,
+            username=username,
+            password=password,
+            host=host,
+            port=port,
+            path=path,
+        )
+
+        assert client._url == f"{protocol}://{host}:{port}{urljoin(path, 'rpc')}"
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    [401, 403],
+)
+def test_raise_unauthorized(status_code: int) -> None:
+    """
+    Verify that Client raises TransmissionAuthError when the server returns 401 or 403.
+    """
+    m = mock.Mock(return_value=mock.Mock(status=status_code))
+    with mock.patch("urllib3.HTTPConnectionPool.request", m), pytest.raises(TransmissionAuthError):
+        Client()

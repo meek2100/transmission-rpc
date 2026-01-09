@@ -575,3 +575,44 @@ def test_parsing_ids(client: Client) -> None:
     # 93: invalid type for _parse_torrent_ids (e.g. float)
     with pytest.raises(ValueError, match="Invalid torrent id"):
         client.start_torrent(ids=1.5)  # type: ignore
+
+
+def test_client_add_kwargs() -> None:
+    """
+    Verify that `add_torrent` correctly translates keyword arguments into the RPC request payload.
+    """
+    torrent_url = "https://github.com/trim21/transmission-rpc/raw/v4.1.0/tests/fixtures/iso.torrent"
+    m = mock.Mock(return_value={"hello": "workd"})
+    with mock.patch.object(Client, "_request", m):
+        with mock.patch.object(Client, "get_session"):
+            c = Client()
+            c.add_torrent(
+                torrent_url,
+                download_dir="dd",
+                files_unwanted=[1, 2],
+                files_wanted=[3, 4],
+                paused=False,
+                peer_limit=5,
+                priority_high=[6],
+                priority_low=[7],
+                priority_normal=[8],
+                cookies="coo",
+                bandwidthPriority=4,
+            )
+        m.assert_called_with(
+            "torrent-add",
+            {
+                "filename": torrent_url,
+                "download-dir": "dd",
+                "files-unwanted": [1, 2],
+                "files-wanted": [3, 4],
+                "paused": False,
+                "peer-limit": 5,
+                "priority-high": [6],
+                "priority-low": [7],
+                "priority-normal": [8],
+                "cookies": "coo",
+                "bandwidthPriority": 4,
+            },
+            timeout=None,
+        )
