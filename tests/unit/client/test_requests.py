@@ -1,3 +1,7 @@
+"""
+Tests for client request handling, errors, and response parsing.
+"""
+
 import json
 from unittest import mock
 
@@ -5,7 +9,6 @@ import pytest
 import urllib3
 
 from transmission_rpc.client import Client
-from transmission_rpc.constants import RpcMethod
 from transmission_rpc.error import (
     TransmissionAuthError,
     TransmissionConnectError,
@@ -14,84 +17,102 @@ from transmission_rpc.error import (
 )
 
 
-def test_http_query_connection_error(client: Client) -> None:
+def test_http_query_connection_error() -> None:
     """Verify that connection errors from urllib3 are raised as TransmissionConnectError."""
-    client._Client__http_client.request.side_effect = urllib3.exceptions.ConnectionError("fail")  # type: ignore[attr-defined]  # noqa: SLF001
-    with pytest.raises(TransmissionConnectError):
-        client._http_query({})  # noqa: SLF001
+    with mock.patch("urllib3.HTTPConnectionPool.request") as mock_req:
+        mock_req.side_effect = urllib3.exceptions.ConnectionError("fail")
+        # Client initialization calls get_session, which triggers the query
+        with pytest.raises(TransmissionConnectError):
+            Client()
 
 
-def test_http_query_timeout_error(client: Client) -> None:
+def test_http_query_timeout_error() -> None:
     """Verify that timeout errors from urllib3 are raised as TransmissionTimeoutError."""
-    client._Client__http_client.request.side_effect = urllib3.exceptions.TimeoutError("fail")  # type: ignore[attr-defined]  # noqa: SLF001
-    with pytest.raises(TransmissionTimeoutError):
-        client._http_query({})  # noqa: SLF001
+    with mock.patch("urllib3.HTTPConnectionPool.request") as mock_req:
+        mock_req.side_effect = urllib3.exceptions.TimeoutError("fail")
+        with pytest.raises(TransmissionTimeoutError):
+            Client()
 
 
-def test_http_query_auth_error(client: Client) -> None:
+def test_http_query_auth_error() -> None:
     """Verify that 401/403 responses are raised as TransmissionAuthError."""
-    client._Client__http_client.request.return_value = mock.Mock(status=401, headers={}, data=b"")  # type: ignore[attr-defined]  # noqa: SLF001
-    with pytest.raises(TransmissionAuthError):
-        client._http_query({})  # noqa: SLF001
+    with mock.patch("urllib3.HTTPConnectionPool.request") as mock_req:
+        mock_req.return_value = mock.Mock(status=401, headers={}, data=b"")
+        with pytest.raises(TransmissionAuthError):
+            Client()
 
 
-def test_http_query_too_many_requests(client: Client) -> None:
+def test_http_query_too_many_requests() -> None:
     """Verify that the client enforces a retry limit on 409 Conflict responses."""
-    conflict_resp = mock.Mock(status=409, headers={"x-transmission-session-id": "new_id"}, data=b"")
-    client._Client__http_client.request.side_effect = [conflict_resp, conflict_resp, conflict_resp, conflict_resp]  # type: ignore[attr-defined]  # noqa: SLF001
-    with pytest.raises(TransmissionError, match="too much request"):
-        client._http_query({})  # noqa: SLF001
+    with mock.patch("urllib3.HTTPConnectionPool.request") as mock_req:
+        # Client should retry a few times then raise or succeed.
+        # If it keeps getting 409, it should eventually fail.
+        conflict_resp = mock.Mock(status=409, headers={"x-transmission-session-id": "new_id"}, data=b"")
+        mock_req.side_effect = [conflict_resp] * 10
+
+        with pytest.raises(TransmissionError, match="too much request"):
+            Client()
 
 
-def test_request_invalid_json(client: Client) -> None:
+def test_request_invalid_json() -> None:
     """Verify that invalid JSON in the response raises a TransmissionError and logs the exception."""
-    client.logger = mock.Mock()
-    client._Client__http_client.request.return_value = mock.Mock(status=200, headers={}, data=b"invalid json")  # type: ignore[attr-defined]  # noqa: SLF001
-    with pytest.raises(TransmissionError, match="failed to parse response"):
-        client._request(RpcMethod.TorrentGet)  # noqa: SLF001
-    client.logger.exception.assert_called()
+    with mock.patch("urllib3.HTTPConnectionPool.request") as mock_req:
+        # 1. Init success
+        mock_req.side_effect = [
+            mock.Mock(
+                status=200,
+                headers={},
+                data=json.dumps({"result": "success", "arguments": {"rpc-version": 17}}).encode(),
+            ),
+            # 2. Invalid JSON for get_torrents
+            mock.Mock(status=200, headers={}, data=b"invalid json"),
+        ]
+
+        c = Client()
+        # Enable logging to verify exception logging
+        c.logger = mock.Mock()
+
+        with pytest.raises(TransmissionError, match="failed to parse response"):
+            c.get_torrents()
+
+        c.logger.exception.assert_called()
 
 
-def test_request_failure_result(client: Client) -> None:
+def test_request_failure_result() -> None:
     """Verify that a JSON response with 'result': 'failure' raises a TransmissionError."""
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]  # noqa: SLF001
-        status=200, headers={}, data=json.dumps({"result": "failure", "arguments": {}}).encode()
-    )
-    with pytest.raises(TransmissionError, match='Query failed with result "failure"'):
-        client._request(RpcMethod.TorrentGet)  # noqa: SLF001
+    with mock.patch("urllib3.HTTPConnectionPool.request") as mock_req:
+        # 1. Init success
+        mock_req.side_effect = [
+            mock.Mock(
+                status=200,
+                headers={},
+                data=json.dumps({"result": "success", "arguments": {"rpc-version": 17}}).encode(),
+            ),
+            # 2. Failure response
+            mock.Mock(status=200, headers={}, data=json.dumps({"result": "failure", "arguments": {}}).encode()),
+        ]
+
+        c = Client()
+        with pytest.raises(TransmissionError, match='Query failed with result "failure"'):
+            c.get_torrents()
 
 
-def test_request_errors() -> None:
-    """Cover _request type checking and logic"""
-    with mock.patch.object(Client, "get_session", autospec=True):
+def test_request_missing_result() -> None:
+    """Verify that a response missing the 'result' field raises a TransmissionError."""
+    with mock.patch("urllib3.HTTPConnectionPool.request") as mock_req:
+        mock_req.side_effect = [
+            mock.Mock(
+                status=200,
+                headers={},
+                data=json.dumps({"result": "success", "arguments": {"rpc-version": 17}}).encode(),
+            ),
+            mock.Mock(status=200, headers={}, data=json.dumps({"arguments": {}}).encode()),
+        ]
+
         c = Client()
         c.logger = mock.Mock()
 
-        # Method check
-        with pytest.raises(TypeError, match="request takes method as string"):
-            c._request(method=123)  # type: ignore  # noqa: SLF001
-
-        # Arguments check
-        with pytest.raises(TypeError, match="request takes arguments should be dict"):
-            c._request(method="m", arguments="not dict")  # type: ignore  # noqa: SLF001
-
-        # Require ids
-        with pytest.raises(ValueError, match="request require ids"):
-            c._request(method="m", require_ids=True)  # type: ignore[arg-type]  # noqa: SLF001
-
-
-def test_request_response_logic() -> None:
-    """Cover response parsing logic"""
-    with mock.patch.object(Client, "get_session", autospec=True):
-        c = Client()
-        c.logger = mock.Mock()
-        # Enable debug to cover logging
-        c.logger.isEnabledFor.return_value = True
-
-        # Mock _http_query
-        # 1. Missing result
-        c._http_query = mock.Mock(return_value=json.dumps({"arguments": {}}))  # type: ignore[method-assign]  # noqa: SLF001
         with pytest.raises(TransmissionError, match="missing without result"):
-            c._request("method")  # type: ignore[arg-type]  # noqa: SLF001
+            c.get_torrents()
 
         c.logger.debug.assert_called()

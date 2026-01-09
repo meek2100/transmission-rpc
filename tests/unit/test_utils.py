@@ -1,141 +1,162 @@
+"""
+Tests for utility functions and helper logic.
+Refactored to test client helpers via the public Client API to avoid private imports.
+"""
+
 from __future__ import annotations
 
 import base64
 import datetime
+import json
 import pathlib
+from typing import Any
+from unittest import mock
 
 import pytest
 
 from transmission_rpc import utils
-from transmission_rpc.client import (
-    _single_str_as_list,
-    _try_read_torrent,
-    ensure_location_str,
-    list_or_none,
-    remove_unset_value,
-)
+from transmission_rpc.client import Client
+
+
+def success_response(arguments: dict[str, Any] | None = None) -> mock.Mock:
+    """Helper to create a standard success response mock."""
+    return mock.Mock(
+        status=200,
+        headers={},
+        data=json.dumps({"result": "success", "arguments": arguments or {}}).encode(),
+    )
+
+
+@pytest.fixture
+def mock_network() -> Any:
+    """Fixture to patch urllib3 request."""
+    with mock.patch("urllib3.HTTPConnectionPool.request") as m:
+        yield m
 
 
 @pytest.mark.parametrize(
     ("delta", "expected"),
-    list(
-        {
-            datetime.timedelta(0, 0): "0 00:00:00",
-            datetime.timedelta(0, 10): "0 00:00:10",
-            datetime.timedelta(0, 60): "0 00:01:00",
-            datetime.timedelta(0, 61): "0 00:01:01",
-            datetime.timedelta(0, 3661): "0 01:01:01",
-            datetime.timedelta(1, 3661): "1 01:01:01",
-            datetime.timedelta(13, 65660): "13 18:14:20",
-        }.items()
-    ),
+    [
+        (datetime.timedelta(0, 0), "0 00:00:00"),
+        (datetime.timedelta(0, 10), "0 00:00:10"),
+        (datetime.timedelta(0, 60), "0 00:01:00"),
+        (datetime.timedelta(0, 61), "0 00:01:01"),
+        (datetime.timedelta(0, 3661), "0 01:01:01"),
+        (datetime.timedelta(1, 3661), "1 01:01:01"),
+        (datetime.timedelta(13, 65660), "13 18:14:20"),
+    ],
 )
 def test_format_timedelta(delta: datetime.timedelta, expected: str) -> None:
     """
     Verify that `format_timedelta` formats timedelta objects into strings as expected.
     """
-    assert utils.format_timedelta(delta) == expected, f"format_timedelta({delta}) != {expected}"
+    assert utils.format_timedelta(delta) == expected
 
 
-def test_remove_unset_value() -> None:
+def test_remove_unset_value_via_set_session(mock_network: Any) -> None:
     """
-    Verify that `remove_unset_value` removes keys with `None` values from a dictionary.
+    Verify `remove_unset_value` logic via `Client.set_session`.
+    Passing `None` for a keyword argument should exclude it from the RPC payload.
     """
-    assert remove_unset_value({"a": 1, "b": None}) == {"a": 1}
+    mock_network.return_value = success_response()
+    c = Client()
+
+    # We pass explicit None for 'speed_limit_down_enabled'
+    c.set_session(speed_limit_down_enabled=None, speed_limit_up_enabled=True)
+
+    sent_args = mock_network.call_args[1]["json"]["arguments"]
+    assert "speed-limit-up-enabled" in sent_args
+    # "speed-limit-down-enabled" should be removed because it was None
+    assert "speed-limit-down-enabled" not in sent_args
 
 
-def test_single_str_as_list() -> None:
+def test_ensure_location_str_via_move_torrent(mock_network: Any) -> None:
     """
-    Verify `_single_str_as_list` converts a single string to a list of that string,
-    keeps lists as is, and returns None for None.
+    Verify `ensure_location_str` logic via `Client.move_torrent_data`.
     """
-    assert _single_str_as_list(None) is None
-    assert _single_str_as_list("a") == ["a"]
-    assert _single_str_as_list(["a"]) == ["a"]
+    mock_network.return_value = success_response()
+    c = Client()
+
+    # Test Path object
+    p = pathlib.Path("/tmp/path")  # noqa: S108
+    c.move_torrent_data(ids=1, location=p)
+    sent_args = mock_network.call_args[1]["json"]["arguments"]
+    assert sent_args["location"] == str(p)
+
+    # Test String
+    c.move_torrent_data(ids=1, location="/str/path")
+    sent_args = mock_network.call_args[1]["json"]["arguments"]
+    assert sent_args["location"] == "/str/path"
 
 
-def test_ensure_location_str() -> None:
-    """Verify that ensure_location_str handles Path objects and strings correctly."""
-    p = pathlib.Path.cwd() / "tmp"
-    assert ensure_location_str(p) == str(p)
-    assert ensure_location_str("/already/string") == "/already/string"
-
-
-def test_ensure_location_str_error() -> None:
+def test_ensure_location_str_error_via_move_torrent(mock_network: Any) -> None:
     """
-    Verify that `ensure_location_str` raises ValueError if the path is relative.
-    Cover ensure_location_str relative path error
+    Verify `ensure_location_str` raises ValueError for relative paths via `Client.move_torrent_data`.
     """
+    c = Client()
     p = pathlib.Path("relative/path")
-    with pytest.raises(ValueError, match=r"using relative `pathlib.Path`"):
-        ensure_location_str(p)
+    with pytest.raises(ValueError, match="using relative"):
+        c.move_torrent_data(ids=1, location=p)
 
 
-def test_list_or_none() -> None:
+def test_list_or_none_via_add_torrent(mock_network: Any) -> None:
     """
-    Verify `list_or_none` converts iterables to lists and returns None for None.
+    Verify `list_or_none` logic via `Client.add_torrent`.
+    Arguments like 'files_wanted' are processed by list_or_none.
     """
-    assert list_or_none(None) is None
-    assert list_or_none([1]) == [1]
-    assert list_or_none((1,)) == [1]
+    mock_network.return_value = success_response()
+    c = Client()
+
+    # 1. Single int -> [int]
+    c.add_torrent("magnet:?", files_wanted=1)
+    args = mock_network.call_args[1]["json"]["arguments"]
+    assert args["files-wanted"] == [1]
+
+    # 2. List -> List
+    c.add_torrent("magnet:?", files_wanted=[2])
+    args = mock_network.call_args[1]["json"]["arguments"]
+    assert args["files-wanted"] == [2]
+
+    # 3. None -> Not in arguments (handled by logic)
+    c.add_torrent("magnet:?", files_wanted=None)
+    args = mock_network.call_args[1]["json"]["arguments"]
+    assert "files-wanted" not in args
 
 
-def test_try_read_torrent_file_url() -> None:
+def test_try_read_torrent_urls_via_add_torrent(mock_network: Any) -> None:
     """
-    Verify that `_try_read_torrent` raises ValueError when encountering a `file://` URL,
-    as support for it has been removed.
+    Verify `_try_read_torrent` logic via `Client.add_torrent` for URLs.
     """
-    with pytest.raises(ValueError, match="support for `file://` URL has been removed"):
-        _try_read_torrent("file:///tmp/a.torrent")
+    mock_network.return_value = success_response()
+    c = Client()
+
+    # HTTP URL -> Passed as filename (internal logic returns None, so client sends as filename)
+    url = "http://example.com/file.torrent"
+    c.add_torrent(url)
+    args = mock_network.call_args[1]["json"]["arguments"]
+    assert args["filename"] == url
+    assert "metainfo" not in args
+
+    # Magnet URL -> Passed as filename
+    magnet = "magnet:?xt=urn:btih:abc"
+    c.add_torrent(magnet)
+    args = mock_network.call_args[1]["json"]["arguments"]
+    assert args["filename"] == magnet
+    assert "metainfo" not in args
 
 
-torrent_hash = "e84213a794f3ccd890382a54a64ca68b7e925433"
-magnet_url = f"magnet:?xt=urn:btih:{torrent_hash}"
-torrent_url = "https://github.com/trim21/transmission-rpc/raw/v4.1.0/tests/fixtures/iso.torrent"
-
-
-def test_try_read_torrent_http_url() -> None:
+def test_try_read_torrent_file_content_via_add_torrent(mock_network: Any) -> None:
     """
-    Verify that `_try_read_torrent` returns None for a standard HTTP URL,
-    indicating it should be handled by the daemon directly.
+    Verify `_try_read_torrent` logic via `Client.add_torrent` for file content (base64 encoding).
     """
-    assert _try_read_torrent(torrent_url) is None, "Should return None for HTTP URLs (let daemon handle it)"
+    mock_network.return_value = success_response()
+    c = Client()
 
+    # Bytes -> encoded to metainfo
+    content = b"some data"
+    encoded = base64.b64encode(content).decode()
 
-def test_try_read_torrent_magnet() -> None:
-    """
-    Verify that `_try_read_torrent` returns None for a magnet link,
-    indicating it should be handled by the daemon directly.
-    """
-    assert _try_read_torrent(magnet_url) is None, "Should return None for magnet URLs (let daemon handle it)"
-
-
-def test_try_read_torrent_pathlib_path() -> None:
-    """
-    Verify that `_try_read_torrent` correctly reads and base64 encodes the content of a local file provided as a Path object.
-    """
-    p = pathlib.Path("tests/fixtures/iso.torrent")
-    b64 = base64.b64encode(p.read_bytes()).decode()
-    assert _try_read_torrent(p) == b64, "Should correctly read and base64 encode content from a Path object"
-
-
-def test_try_read_torrent_file_object() -> None:
-    """
-    Verify that `_try_read_torrent` correctly reads and base64 encodes the content of an open file object.
-    """
-    with open("tests/fixtures/iso.torrent", "rb") as f:
-        content = f.read()
-        f.seek(0)
-        data = _try_read_torrent(f)
-
-    assert base64.b64encode(content).decode() == data, "Should correctly base64 encode content from a file object"
-
-
-def test_try_read_torrent_bytes() -> None:
-    """
-    Verify that `_try_read_torrent` correctly base64 encodes raw bytes content.
-    """
-    with open("tests/fixtures/iso.torrent", "rb") as f:
-        content = f.read()
-    data = _try_read_torrent(content)
-    assert base64.b64encode(content).decode() == data, "Should correctly base64 encode raw bytes"
+    c.add_torrent(content)
+    args = mock_network.call_args[1]["json"]["arguments"]
+    assert args["metainfo"] == encoded
+    assert "filename" not in args

@@ -1,3 +1,7 @@
+"""
+Tests for Torrent class, status handling, and property calculations.
+"""
+
 import calendar
 import contextlib
 import datetime
@@ -13,14 +17,17 @@ from transmission_rpc.torrent import FileStat, Status, Torrent, get_status
 
 
 def check_properties(cls: type, obj: Any) -> None:
-    """Iterate over all properties of a class to ensure getters do not raise exceptions."""
+    """Iterate over all public properties of a class to ensure getters do not raise exceptions."""
     for prop in dir(cls):
+        # Skip private/protected properties to adhere to public API testing
+        if prop.startswith("_"):
+            continue
         if isinstance(getattr(cls, prop), property):
             with contextlib.suppress(KeyError, DeprecationWarning):
                 getattr(obj, prop)
 
 
-def assert_property_exception(exception, ob, prop):
+def assert_property_exception(exception: type[Exception], ob: Any, prop: str) -> None:
     """Helper to assert that accessing a property raises a specific exception."""
     with pytest.raises(exception):
         getattr(ob, prop)
@@ -32,8 +39,6 @@ def test_torrent_missing_optional_fields() -> None:
     fields = {
         "id": 1,
         "files": [{"length": 1, "name": "f", "bytesCompleted": 0}],
-        # "priorities" missing
-        # "wanted" missing
     }
     t = Torrent(fields=fields)
     assert len(t.get_files()) == 1
@@ -67,7 +72,8 @@ def test_torrent_status_and_idle_mode_mapping() -> None:
     }
     t = Torrent(fields=fields)
     assert t.seed_idle_mode.value == 0
-    assert t._status_str == "downloading"  # noqa: SLF001
+    # Use public API 'status' which returns a Status(str) enum
+    assert t.status == "downloading"
 
 
 def test_torrent_defaults_and_basic_props() -> None:
@@ -79,7 +85,6 @@ def test_torrent_defaults_and_basic_props() -> None:
         "hashString": "hash",
         "files": [{"length": 100, "name": "f1", "bytesCompleted": 100}],
         "pieces": "",
-        # Missing priorities, wanted, etc.
     }
     t = Torrent(fields=fields)
 
@@ -280,7 +285,7 @@ def test_status_unknown() -> None:
     assert get_status(999) == "unknown status 999"
 
 
-def test_activity_date_zero():
+def test_activity_date_zero() -> None:
     """
     Verify that a Torrent object correctly handles the 'activityDate' field being 0 (non-active).
     """

@@ -1,3 +1,7 @@
+"""
+Tests for data types: Group, Container, BitMap, etc.
+"""
+
 import contextlib
 from typing import Any
 from unittest import mock
@@ -12,9 +16,13 @@ from transmission_rpc.types import BitMap, Container, Group, PortTestResult
 
 def check_properties(cls: type, obj: Any) -> None:
     """
-    Helper function to access all properties of a class instance to ensure no errors are raised.
+    Helper function to access all public properties of a class instance
+    to ensure no errors are raised.
     """
     for prop in dir(cls):
+        # Skip private/protected properties
+        if prop.startswith("_"):
+            continue
         if isinstance(getattr(cls, prop), property):
             with contextlib.suppress(KeyError, DeprecationWarning):
                 getattr(obj, prop)

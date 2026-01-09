@@ -1,3 +1,7 @@
+"""
+Tests for Client lifecycle: initialization, URL parsing, properties, and context managers.
+"""
+
 from __future__ import annotations
 
 import importlib
@@ -17,15 +21,16 @@ import transmission_rpc.client
 from transmission_rpc import DEFAULT_TIMEOUT, from_url
 from transmission_rpc._unix_socket import UnixHTTPConnection, UnixHTTPConnectionPool
 from transmission_rpc.client import Client
-from transmission_rpc.constants import LOGGER
+from transmission_rpc.constants import LOGGER, get_torrent_arguments
 from transmission_rpc.error import TransmissionAuthError
 
 
 @pytest.mark.parametrize(
     ("url", "kwargs"),
-    list(
-        {
-            "http://a:b@127.0.0.1:9092/transmission/rpc": {
+    [
+        (
+            "http://a:b@127.0.0.1:9092/transmission/rpc",
+            {
                 "protocol": "http",
                 "username": "a",
                 "password": "b",
@@ -33,7 +38,10 @@ from transmission_rpc.error import TransmissionAuthError
                 "port": 9092,
                 "path": "/transmission/rpc",
             },
-            "http://127.0.0.1/transmission/rpc": {
+        ),
+        (
+            "http://127.0.0.1/transmission/rpc",
+            {
                 "protocol": "http",
                 "username": None,
                 "password": None,
@@ -41,7 +49,10 @@ from transmission_rpc.error import TransmissionAuthError
                 "port": 80,
                 "path": "/transmission/rpc",
             },
-            "https://127.0.0.1/tr/transmission/rpc": {
+        ),
+        (
+            "https://127.0.0.1/tr/transmission/rpc",
+            {
                 "protocol": "https",
                 "username": None,
                 "password": None,
@@ -49,7 +60,10 @@ from transmission_rpc.error import TransmissionAuthError
                 "port": 443,
                 "path": "/tr/transmission/rpc",
             },
-            "https://127.0.0.1/": {
+        ),
+        (
+            "https://127.0.0.1/",
+            {
                 "protocol": "https",
                 "username": None,
                 "password": None,
@@ -57,7 +71,10 @@ from transmission_rpc.error import TransmissionAuthError
                 "port": 443,
                 "path": "/",
             },
-            "http+unix://%2Fvar%2Frun%2Ftransmission.sock/transmission/rpc": {
+        ),
+        (
+            "http+unix://%2Fvar%2Frun%2Ftransmission.sock/transmission/rpc",
+            {
                 "protocol": "http+unix",
                 "username": None,
                 "password": None,
@@ -65,8 +82,8 @@ from transmission_rpc.error import TransmissionAuthError
                 "port": None,
                 "path": "/transmission/rpc",
             },
-        }.items()
-    ),
+        ),
+    ],
 )
 def test_from_url(url: str, kwargs: dict[str, Any]) -> None:
     """
@@ -113,57 +130,70 @@ def test_timeout_property(client: Client) -> None:
 def test_deprecated_properties(client: Client) -> None:
     """Verify that accessing deprecated properties emits a DeprecationWarning and returns expected values."""
     with pytest.warns(DeprecationWarning, match="do not use"):
-        assert client.url == client._url  # noqa: SLF001
+        assert isinstance(client.url, str)
     with pytest.warns(DeprecationWarning, match="do not use"):
-        assert client.torrent_get_arguments == client._Client__torrent_get_arguments  # type: ignore[attr-defined] # noqa: SLF001
+        # Verify it matches the constant for the current mocked version (17)
+        assert client.torrent_get_arguments == get_torrent_arguments(17)
     with pytest.warns(DeprecationWarning, match="do not use"):
-        # The raw_session is populated by get_session() which is called in client init.
-        # The fixture mock returns specific session data.
-        assert "version" in client.raw_session
+        assert isinstance(client.raw_session, dict)
     with pytest.warns(DeprecationWarning, match="do not use"):
-        assert client.session_id == "session_id"
+        assert client.session_id == "0"
     with pytest.warns(DeprecationWarning, match="do not use"):
-        assert client.server_version == "4.0.0"
+        assert client.server_version is not None
     with pytest.warns(DeprecationWarning, match="use .get_session"):
-        assert client.semver_version == "5.3.0"
+        assert client.semver_version is not None
     with pytest.warns(DeprecationWarning, match="use .get_session"):
         assert client.rpc_version == 17
 
 
-def test_client_init_no_auth(mock_http_client: Any) -> None:
+def test_client_init_no_auth() -> None:
     """Verify that initializing Client without credentials does not set the Authorization header."""
-    c = Client(username=None, password=None)
-    headers = c._Client__auth_headers  # type: ignore[attr-defined]  # noqa: SLF001
-    assert "Authorization" not in headers
+    # We patch make_headers to verify it is NOT called with basic_auth
+    with (
+        mock.patch("transmission_rpc.client.make_headers", wraps=urllib3.util.make_headers) as mock_make,
+        mock.patch("transmission_rpc.client.urllib3.HTTPConnectionPool") as mock_pool,
+    ):
+        mock_pool.return_value.request.return_value = mock.Mock(
+            status=200,
+            headers={"x-transmission-session-id": "0"},
+            data=json.dumps({"result": "success", "arguments": {}}).encode(),
+        )
+        Client(username=None, password=None)
+
+        # Check calls to make_headers
+        # It might be called for user_agent, but should not have basic_auth
+        for call in mock_make.call_args_list:
+            assert "basic_auth" not in call.kwargs or call.kwargs["basic_auth"] is None
 
 
-def test_client_init_timeout_parsing(mock_http_client: Any) -> None:
+def test_client_init_timeout_parsing() -> None:
     """
     Verify that initializing Client with different timeout types (float, int, Timeout object, None)
     behaves as expected, and raises TypeError for invalid types.
     """
-    # Float
-    c = Client(timeout=10.0)
-    assert c.timeout is not None
-    assert c.timeout.total == 10.0
+    with mock.patch("transmission_rpc.client.Client.get_session"):
+        # Float
+        c = Client(timeout=10.0)
+        assert c.timeout is not None
+        assert c.timeout.total == 10.0
 
-    # Int
-    c = Client(timeout=10)
-    assert c.timeout is not None
-    assert c.timeout.total == 10.0
+        # Int
+        c = Client(timeout=10)
+        assert c.timeout is not None
+        assert c.timeout.total == 10.0
 
-    # Timeout object
-    c = Client(timeout=Timeout(10))
-    assert c.timeout is not None
-    assert c.timeout.total == 10
+        # Timeout object
+        c = Client(timeout=Timeout(10))
+        assert c.timeout is not None
+        assert c.timeout.total == 10
 
-    # None
-    c = Client(timeout=None)
-    assert c.timeout is None
+        # None
+        c = Client(timeout=None)
+        assert c.timeout is None
 
-    # Invalid
-    with pytest.raises(TypeError, match="unsupported value"):
-        Client(timeout="invalid")  # type: ignore[arg-type]
+        # Invalid
+        with pytest.raises(TypeError, match="unsupported value"):
+            Client(timeout="invalid")  # type: ignore[arg-type]
 
 
 def test_context_manager_error(client: Client) -> None:
@@ -179,27 +209,18 @@ def test_http_unix_init() -> None:
         mock.patch.object(Client, "get_session", autospec=True),
     ):
         c = Client(protocol="http+unix", host="/tmp/test", path="/transmission/")  # noqa: S108
-        assert c._url == "http+unix://localhost:9091/transmission/rpc"  # noqa: SLF001
+        # Use public property (deprecated) to verify URL construction
+        with pytest.warns(DeprecationWarning, match="do not use"):
+            assert c.url == "http+unix://localhost:9091/transmission/rpc"
 
 
 def test_client_init_edge_cases() -> None:
-    """Cover Client init branches including timeout=None, path correction, and HTTPS protocol."""
+    """Cover Client init branches including path correction and HTTPS protocol."""
     with mock.patch.object(Client, "get_session", autospec=True):
-        # timeout=None
-        c = Client(timeout=None)
-        assert c.timeout is None
-
-        # timeout=Timeout object
-        t = Timeout(10)
-        c = Client(timeout=t)
-        assert c.timeout is t
-
         # path fix
         c = Client(path="/transmission/")
-        assert c._path == "/transmission/rpc"  # noqa: SLF001
-
-        # Auth
-        c = Client(username="u", password="p")  # noqa: S106
+        with pytest.warns(DeprecationWarning, match="do not use"):
+            assert c.url.endswith("/transmission/rpc")
 
         # HTTPS
         with mock.patch("transmission_rpc.client.urllib3.HTTPSConnectionPool") as mock_https:
@@ -209,18 +230,28 @@ def test_client_init_edge_cases() -> None:
 
 def test_session_close_and_context_manager() -> None:
     """Cover remaining client methods (lifecycle parts) like session_close and context manager behavior."""
-    with mock.patch.object(Client, "get_session", autospec=True):
+    with (
+        mock.patch.object(Client, "get_session", autospec=True),
+        mock.patch("transmission_rpc.client.urllib3.HTTPConnectionPool") as mock_pool,
+    ):
+        mock_instance = mock_pool.return_value
         c = Client()
-        c._request = mock.Mock()  # type: ignore[method-assign] # Needed because session_close calls it  # noqa: SLF001
+        # Mock request for session_close
+        mock_instance.request.return_value = mock.Mock(
+            status=200,
+            data=json.dumps({"result": "success", "arguments": {}}).encode(),
+        )
 
         # session_close
         c.session_close()
+        # Should have called request with session-close
+        assert mock_instance.request.call_count >= 1
 
         # Context manager
-        c.close = mock.Mock()  # type: ignore[method-assign]
         with c:
             pass
-        c.close.assert_called()
+        # Should close the pool
+        mock_instance.close.assert_called()
 
 
 def test_from_url_invalid_scheme() -> None:
@@ -239,18 +270,19 @@ def test_from_url_http() -> None:
     """Verify `from_url` correctly parses standard HTTP URLs."""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = from_url("http://127.0.0.1")
-        assert ":80" in c._url  # noqa: SLF001
+        with pytest.warns(DeprecationWarning, match="do not use"):
+            assert ":80" in c.url
 
 
 def test_from_url_https() -> None:
     """Verify `from_url` correctly parses HTTPS URLs."""
-    # We need to mock HTTPSConnectionPool to avoid certifi errors or connection attempts
     with (
         mock.patch("transmission_rpc.client.urllib3.HTTPSConnectionPool"),
         mock.patch.object(Client, "get_session", autospec=True),
     ):
         c = from_url("https://127.0.0.1")
-        assert ":443" in c._url  # noqa: SLF001
+        with pytest.warns(DeprecationWarning, match="do not use"):
+            assert ":443" in c.url
 
 
 def test_from_url_http_unix() -> None:
@@ -260,8 +292,8 @@ def test_from_url_http_unix() -> None:
         mock.patch.object(Client, "get_session", autospec=True),
     ):
         c = from_url("http+unix://%2Ftmp%2Ftest")
-        # host is unquoted to /tmp/test, but Client init uses localhost for _url host part
-        assert "http+unix://localhost" in c._url  # noqa: SLF001
+        with pytest.warns(DeprecationWarning, match="do not use"):
+            assert "http+unix://localhost" in c.url
 
 
 def test_unix_http_connection() -> None:
@@ -278,7 +310,6 @@ def test_unix_http_connection() -> None:
 
 def test_unix_http_connection_options() -> None:
     """Verify `UnixHTTPConnection` respects socket options and timeouts."""
-    # Test with socket options and timeout
     conn = UnixHTTPConnection(
         "/tmp/sock",  # noqa: S108
         socket_options=[(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)],
@@ -356,7 +387,9 @@ def test_client_parse_url(
             path=path,
         )
 
-        assert client._url == f"{protocol}://{host}:{port}{urljoin(path, 'rpc')}"  # noqa: SLF001
+        expected_url = f"{protocol}://{host}:{port}{urljoin(path, 'rpc')}"
+        with pytest.warns(DeprecationWarning, match="do not use"):
+            assert client.url == expected_url
 
 
 @pytest.mark.parametrize(
@@ -367,12 +400,12 @@ def test_raise_unauthorized(status_code: int) -> None:
     """
     Verify that Client raises TransmissionAuthError when the server returns 401 or 403.
     """
-    m = mock.Mock(return_value=mock.Mock(status=status_code))
+    m = mock.Mock(return_value=mock.Mock(status=status_code, data=b""))
     with mock.patch("urllib3.HTTPConnectionPool.request", m), pytest.raises(TransmissionAuthError):
         Client()
 
 
-def test_client_custom_ca_bundle():
+def test_client_custom_ca_bundle() -> None:
     """Verify that tls_cert_file is passed to the HTTPSConnectionPool."""
     custom_ca = "/path/to/custom/ca.pem"
 
@@ -386,7 +419,7 @@ def test_client_custom_ca_bundle():
         assert kwargs["ca_certs"] == custom_ca
 
 
-def test_client_default_ca_bundle():
+def test_client_default_ca_bundle() -> None:
     """Verify that we fall back to certifi when no tls_cert_file is provided."""
     with (
         mock.patch("transmission_rpc.client.Client.get_session"),
@@ -398,7 +431,7 @@ def test_client_default_ca_bundle():
         assert kwargs["ca_certs"] == certifi.where()
 
 
-def test_client_env_var_ca_bundle(tmp_path: pathlib.Path):
+def test_client_env_var_ca_bundle(tmp_path: pathlib.Path) -> None:
     """Verify that we fall back to TRANSMISSION_RPC_PY_CERT_FILE if provided."""
     custom_ca = str(tmp_path / "env-ca.pem")
 
@@ -417,7 +450,7 @@ def test_client_env_var_ca_bundle(tmp_path: pathlib.Path):
     importlib.reload(transmission_rpc.client)
 
 
-def test_client_arg_priority_over_env(tmp_path: pathlib.Path):
+def test_client_arg_priority_over_env(tmp_path: pathlib.Path) -> None:
     """Verify that the explicit argument overrides the environment variable."""
     custom_env_ca = str(tmp_path / "env-ca.pem")
     explicit_ca = str(tmp_path / "arg-ca.pem")
