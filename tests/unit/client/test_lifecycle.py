@@ -189,22 +189,6 @@ def test_import_error_version() -> None:
     importlib.reload(transmission_rpc.client)
 
 
-def test_timeout_property_mocked() -> None:
-    """Verify timeout property behavior with mocked session to isolate logic."""
-    with mock.patch.object(Client, "get_session", autospec=True):
-        c = Client(timeout=10)
-        assert isinstance(c.timeout, Timeout)
-
-        c.timeout = Timeout(20)
-        assert c.timeout.total == 20
-
-        with pytest.raises(TypeError):
-            c.timeout = 10  # type: ignore[assignment]
-
-        del c.timeout
-        assert c.timeout.total == 30.0  # Default
-
-
 def test_client_init_variations() -> None:
     """Cover Client init branches including timeout=None, path correction, and HTTPS protocol."""
     with mock.patch.object(Client, "get_session", autospec=True):

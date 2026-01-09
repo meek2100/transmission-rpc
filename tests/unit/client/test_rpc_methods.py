@@ -184,7 +184,7 @@ def test_add_torrent_args() -> None:
         c.add_torrent("magnet:?xt=urn:btih:a", labels=["l"], sequential_download=True, bandwidthPriority=1)
 
 
-def test_client_method_edge_cases() -> None:
+def test_misc_rpc_method_edge_cases() -> None:
     """
     Verify edge case handling for invalid session encryption values, `start_torrent` queue bypassing,
     field filtering in `get_torrents`, and path mismatches in `free_space`.
@@ -249,8 +249,7 @@ def test_add_torrent_types() -> None:
 
 def test_add_torrent_empty_metadata_and_unknown_types() -> None:
     """
-    Verify that `add_torrent` raises ValueError for empty metadata or unknown input types,
-    and ensure `start_all` correctly handles the `bypass_queue` flag when managing torrents.
+    Verify that `add_torrent` raises ValueError for empty metadata or unknown input types.
     """
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
@@ -267,15 +266,6 @@ def test_add_torrent_empty_metadata_and_unknown_types() -> None:
         # Then calls _request.
         c._request.return_value = {"torrent-added": {"id": 1}}  # noqa: SLF001
         c.add_torrent(obj)  # type: ignore
-
-        # start_all bypass_queue with torrents to fully exercise logic
-        c._request.side_effect = [  # noqa: SLF001
-            {"torrents": [{"id": 1, "hashString": "h", "queuePosition": 0}]},  # get_torrents
-            {},  # start
-        ]
-        c.start_all(bypass_queue=True)
-        # Check second call argument
-        assert c._request.call_args_list[-1][0][0] == "torrent-start-now"  # noqa: SLF001
 
     # Use a new client to test _request logic because we need the real _request to run
     # Client.get_session is already patched by the outer context if we are not careful

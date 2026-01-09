@@ -214,16 +214,19 @@ def test_torrent_representation() -> None:
 
 
 def test_torrent_properties_access() -> None:
+    """Verify that all properties of a Torrent instance can be accessed without error."""
     t = Torrent(fields={"id": 1})
     check_properties(Torrent, t)
 
 
 def test_file_stat_properties_access() -> None:
+    """Verify that all properties of a FileStat instance can be accessed without error."""
     f = FileStat(fields={})
     check_properties(FileStat, f)
 
 
 def test_status_properties_full() -> None:
+    """Verify that Status objects correctly report boolean states (e.g., stopped, checking) and string representation."""
     s = Status("stopped")
     assert s.stopped is True
     assert s.check_pending is False
@@ -233,6 +236,7 @@ def test_status_properties_full() -> None:
 
 
 def test_eta_and_date_handling() -> None:
+    """Verify formatting of ETA, handling of idle ETA, and conversion of epoch timestamps to datetime objects."""
     fields = {
         "id": 1,
         "eta": -1,
@@ -272,6 +276,7 @@ def test_eta_and_date_handling() -> None:
 
 
 def test_status_unknown() -> None:
+    """Verify that `get_status` returns a formatted unknown string for invalid status codes."""
     assert get_status(999) == "unknown status 999"
 
 
