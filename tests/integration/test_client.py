@@ -135,7 +135,7 @@ def test_groups(tr_client: Client) -> None:
     Skips if RPC version is too low.
     """
     if tr_client.get_session().rpc_version < 17:
-        raise ServerTooLowError  # pragma: no cover
+        raise ServerTooLowError
 
     tr_client.set_group("test.1")
     groups = tr_client.get_groups()
