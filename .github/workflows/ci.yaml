@@ -5,10 +5,8 @@ on:
     branches:
       - master
   pull_request:
-    branches:
-      - master
   schedule:
-    - cron: '1 4 * * 4'
+    - cron: "1 4 * * 4"
 
 jobs:
   test:
@@ -66,13 +64,13 @@ jobs:
       - run: transmission-daemon --rpc-bind-address unix:/tmp/transmission.socket
       - uses: actions/setup-python@v6
         with:
-          python-version: '3.10'
+          python-version: "3.10"
           cache: pip
       - run: pip install -e .[dev]
       - run: coverage run -m pytest
         env:
-          TR_PROTOCOL: 'http+unix'
-          TR_HOST: '/tmp/transmission.socket'
+          TR_PROTOCOL: "http+unix"
+          TR_HOST: "/tmp/transmission.socket"
       - uses: codecov/codecov-action@v5
         with:
           flags: "unix-socket"
