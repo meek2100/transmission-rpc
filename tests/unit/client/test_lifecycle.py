@@ -109,21 +109,23 @@ def test_timeout_property(client: Client) -> None:
 
 
 def test_deprecated_properties(client: Client) -> None:
-    """Verify that accessing deprecated properties emits a DeprecationWarning."""
+    """Verify that accessing deprecated properties emits a DeprecationWarning and returns expected values."""
     with pytest.warns(DeprecationWarning, match="do not use"):
-        _ = client.url
+        assert client.url == client._url  # noqa: SLF001
     with pytest.warns(DeprecationWarning, match="do not use"):
-        _ = client.torrent_get_arguments
+        assert client.torrent_get_arguments == client._Client__torrent_get_arguments  # type: ignore[attr-defined] # noqa: SLF001
     with pytest.warns(DeprecationWarning, match="do not use"):
-        _ = client.raw_session
+        # The raw_session is populated by get_session() which is called in client init.
+        # The fixture mock returns specific session data.
+        assert "version" in client.raw_session
     with pytest.warns(DeprecationWarning, match="do not use"):
-        _ = client.session_id
+        assert client.session_id == "session_id"
     with pytest.warns(DeprecationWarning, match="do not use"):
-        _ = client.server_version
+        assert client.server_version == "4.0.0"
     with pytest.warns(DeprecationWarning, match="use .get_session"):
-        _ = client.semver_version
+        assert client.semver_version == "5.3.0"
     with pytest.warns(DeprecationWarning, match="use .get_session"):
-        _ = client.rpc_version
+        assert client.rpc_version == 17
 
 
 def test_client_init_no_auth(mock_http_client: Any) -> None:
@@ -185,30 +187,6 @@ def test_import_error_version() -> None:
         assert transmission_rpc.client.__version__ == "develop"
 
     importlib.reload(transmission_rpc.client)
-
-
-def test_deprecated_client_properties() -> None:
-    """Cover deprecated properties to ensure they return the expected values and emit warnings."""
-    with mock.patch.object(Client, "get_session", autospec=True):
-        c = Client()
-        # Manually set private attributes that are usually set in init/get_session
-        c._Client__semver_version = "1.0.0"  # type: ignore[attr-defined]  # noqa: SLF001
-        c._Client__protocol_version = 15  # type: ignore[attr-defined]  # noqa: SLF001
-
-        with pytest.warns(DeprecationWarning):  # noqa: PT030
-            assert c.semver_version == "1.0.0"
-        with pytest.warns(DeprecationWarning):  # noqa: PT030
-            assert c.rpc_version == 15
-        with pytest.warns(DeprecationWarning):  # noqa: PT030
-            assert c.url == c._url  # noqa: SLF001
-        with pytest.warns(DeprecationWarning):  # noqa: PT030
-            assert c.session_id == "0"
-        with pytest.warns(DeprecationWarning):  # noqa: PT030
-            assert c.server_version == "(unknown)"
-        with pytest.warns(DeprecationWarning):  # noqa: PT030
-            assert c.torrent_get_arguments == c._Client__torrent_get_arguments  # type: ignore[attr-defined]  # noqa: SLF001
-        with pytest.warns(DeprecationWarning):  # noqa: PT030
-            assert c.raw_session == {}
 
 
 def test_timeout_property_mocked() -> None:

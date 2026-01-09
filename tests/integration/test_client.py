@@ -17,7 +17,7 @@ magnet_url = f"magnet:?xt=urn:btih:{torrent_hash}"
 torrent_url = "https://github.com/trim21/transmission-rpc/raw/v4.1.0/tests/fixtures/iso.torrent"
 
 
-def test_real_add_magnet(tr_client: Client) -> None:
+def test_add_magnet(tr_client: Client) -> None:
     """
     Integration test: Verify adding a torrent via magnet link actually adds it to the daemon.
     """
@@ -25,7 +25,7 @@ def test_real_add_magnet(tr_client: Client) -> None:
     assert len(tr_client.get_torrents()) == 1, "Transmission daemon should have exactly 1 task after adding magnet link"
 
 
-def test_real_add_torrent_fd(tr_client: Client) -> None:
+def test_add_torrent_fd(tr_client: Client) -> None:
     """
     Integration test: Verify adding a torrent via an open file descriptor.
     """
@@ -36,7 +36,7 @@ def test_real_add_torrent_fd(tr_client: Client) -> None:
     )
 
 
-def test_real_add_torrent_http(tr_client: Client) -> None:
+def test_add_torrent_http(tr_client: Client) -> None:
     """
     Integration test: Verify adding a torrent via an HTTP URL.
     """
@@ -44,7 +44,7 @@ def test_real_add_torrent_http(tr_client: Client) -> None:
     assert len(tr_client.get_torrents()) == 1, "Transmission daemon should have exactly 1 task after adding HTTP URL"
 
 
-def test_real_stop(tr_client: Client, fake_hash_factory: object) -> None:
+def test_stop(tr_client: Client, fake_hash_factory: object) -> None:
     """
     Integration test: Verify stopping a torrent works.
     """
@@ -66,7 +66,7 @@ def test_real_stop(tr_client: Client, fake_hash_factory: object) -> None:
     assert ret, "Torrent status should eventually become 'stopped'"
 
 
-def test_real_torrent_start_all(tr_client: Client) -> None:
+def test_torrent_start_all(tr_client: Client) -> None:
     """
     Integration test: Verify `start_all` starts all paused torrents.
     """
@@ -79,14 +79,14 @@ def test_real_torrent_start_all(tr_client: Client) -> None:
         assert torrent.downloading or torrent.checking, "All torrents should be downloading or checking after start_all"
 
 
-def test_real_session_get(tr_client: Client) -> None:
+def test_session_get(tr_client: Client) -> None:
     """
     Integration test: Verify `get_session` returns session information without error.
     """
     tr_client.get_session()
 
 
-def test_real_free_space(tr_client: Client) -> None:
+def test_free_space(tr_client: Client) -> None:
     """
     Integration test: Verify `free_space` returns valid information for the download directory.
     """
@@ -95,14 +95,14 @@ def test_real_free_space(tr_client: Client) -> None:
         tr_client.free_space(session.download_dir)
 
 
-def test_real_session_stats(tr_client: Client) -> None:
+def test_session_stats(tr_client: Client) -> None:
     """
     Integration test: Verify `session_stats` returns statistics without error.
     """
     tr_client.session_stats()
 
 
-def test_real_torrent_attr_type(tr_client: Client) -> None:
+def test_torrent_attr_type(tr_client: Client) -> None:
     """
     Integration test: Verify that torrent attributes have the expected types.
     """
@@ -113,7 +113,7 @@ def test_real_torrent_attr_type(tr_client: Client) -> None:
         assert isinstance(torrent.name, str), "Torrent name should be a string"
 
 
-def test_real_torrent_get_files(tr_client: Client) -> None:
+def test_torrent_get_files(tr_client: Client) -> None:
     """
     Integration test: Verify that `get_files` returns a list of File objects.
     """
