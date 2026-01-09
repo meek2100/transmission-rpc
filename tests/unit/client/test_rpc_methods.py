@@ -97,7 +97,7 @@ def test_file_scheme_error() -> None:
             c.add_torrent("file:///tmp/test.torrent")
 
 
-def test_change_torrent_warnings() -> None:
+def test_change_torrent_version_warnings() -> None:
     """Verify specific warnings for `change_torrent` based on RPC version thresholds."""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
@@ -512,7 +512,7 @@ def test_rpc_version_warning(client: Client) -> None:
         mock_warn.assert_called()
 
 
-def test_set_session_warnings_extended(client: Client) -> None:
+def test_set_session_tracker_warnings(client: Client) -> None:
     """Verify that `set_session` emits warnings for features not supported by the current server version."""
     client._Client__protocol_version = 16  # type: ignore[attr-defined] # noqa: SLF001
     client._Client__http_client.request.return_value.data = json.dumps({"result": "success", "arguments": {}}).encode()  # type: ignore[attr-defined] # noqa: SLF001

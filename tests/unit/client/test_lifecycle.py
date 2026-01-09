@@ -189,7 +189,7 @@ def test_import_error_version() -> None:
     importlib.reload(transmission_rpc.client)
 
 
-def test_client_init_variations() -> None:
+def test_client_init_edge_cases() -> None:
     """Cover Client init branches including timeout=None, path correction, and HTTPS protocol."""
     with mock.patch.object(Client, "get_session", autospec=True):
         # timeout=None
