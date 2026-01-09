@@ -13,6 +13,7 @@ from transmission_rpc.torrent import FileStat, Status, Torrent, get_status
 
 
 def check_properties(cls: type, obj: Any) -> None:
+    """Iterate over all properties of a class to ensure getters do not raise exceptions."""
     for prop in dir(cls):
         if isinstance(getattr(cls, prop), property):
             with contextlib.suppress(KeyError, DeprecationWarning):
@@ -26,6 +27,7 @@ def assert_property_exception(exception, ob, prop):
 
 
 def test_torrent_missing_optional_fields() -> None:
+    """Verify Torrent initialization handles missing optional fields (priorities, wanted) gracefully."""
     # files present but priorities/wanted missing
     fields = {
         "id": 1,
@@ -40,6 +42,7 @@ def test_torrent_missing_optional_fields() -> None:
 
 
 def test_torrent_status_properties() -> None:
+    """Verify that Status objects correctly report their state (e.g., checking, downloading)."""
     s = Status("checking")
     assert s.checking
     assert not s.stopped
@@ -56,6 +59,7 @@ def test_torrent_status_properties() -> None:
 
 
 def test_torrent_misc_properties() -> None:
+    """Verify miscellaneous Torrent properties like seed_idle_mode and status string mapping."""
     fields = {
         "id": 1,
         "seedIdleMode": 0,  # global
@@ -281,7 +285,7 @@ def test_status_properties_full() -> None:
     check_properties(Status, s)
 
 
-def test_torrent_rich_fields() -> None:
+def test_eta_and_date_handling() -> None:
     fields = {
         "id": 1,
         "eta": -1,
@@ -324,7 +328,7 @@ def test_status_unknown() -> None:
     assert get_status(999) == "unknown status 999"
 
 
-def test_non_active():
+def test_activity_date_zero():
     """
     Verify that a Torrent object correctly handles the 'activityDate' field being 0 (non-active).
     """
