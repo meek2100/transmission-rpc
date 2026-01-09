@@ -60,4 +60,5 @@ def tr_client(ensure_transmission_running: None) -> Generator[Client, None, None
 
 @pytest.fixture
 def fake_hash_factory() -> Callable[[], str]:
+    """Generates a random SHA1 hash string for testing."""
     return lambda: secrets.token_hex(20)

@@ -372,7 +372,7 @@ def test_get_group_none(client: Client) -> None:
     assert client.get_group("test") is None
 
 
-def test_methods_returning_none(client: Client) -> None:
+def test_void_rpc_methods_success(client: Client) -> None:
     """
     Verify that various client methods (e.g., queue movement, session configuration)
     execute without error and return None when the server responds with success.
