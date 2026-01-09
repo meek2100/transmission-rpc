@@ -1,4 +1,3 @@
-# ruff: noqa: SLF001, S108, S106, PT030
 from __future__ import annotations
 
 import importlib
@@ -130,7 +129,7 @@ def test_deprecated_properties(client: Client) -> None:
 def test_client_init_no_auth(mock_http_client: Any) -> None:
     """Verify that initializing Client without credentials does not set the Authorization header."""
     c = Client(username=None, password=None)
-    headers = c._Client__auth_headers  # type: ignore[attr-defined]
+    headers = c._Client__auth_headers  # type: ignore[attr-defined]  # noqa: SLF001
     assert "Authorization" not in headers
 
 
@@ -175,8 +174,8 @@ def test_http_unix_init() -> None:
         mock.patch("transmission_rpc.client.UnixHTTPConnectionPool"),
         mock.patch.object(Client, "get_session", autospec=True),
     ):
-        c = Client(protocol="http+unix", host="/tmp/test", path="/transmission/")
-        assert c._url == "http+unix://localhost:9091/transmission/rpc"
+        c = Client(protocol="http+unix", host="/tmp/test", path="/transmission/")  # noqa: S108
+        assert c._url == "http+unix://localhost:9091/transmission/rpc"  # noqa: SLF001
 
 
 def test_import_error_version() -> None:
@@ -193,22 +192,22 @@ def test_deprecated_client_properties() -> None:
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         # Manually set private attributes that are usually set in init/get_session
-        c._Client__semver_version = "1.0.0"  # type: ignore[attr-defined]
-        c._Client__protocol_version = 15  # type: ignore[attr-defined]
+        c._Client__semver_version = "1.0.0"  # type: ignore[attr-defined]  # noqa: SLF001
+        c._Client__protocol_version = 15  # type: ignore[attr-defined]  # noqa: SLF001
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(DeprecationWarning):  # noqa: PT030
             assert c.semver_version == "1.0.0"
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(DeprecationWarning):  # noqa: PT030
             assert c.rpc_version == 15
-        with pytest.warns(DeprecationWarning):
-            assert c.url == c._url
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(DeprecationWarning):  # noqa: PT030
+            assert c.url == c._url  # noqa: SLF001
+        with pytest.warns(DeprecationWarning):  # noqa: PT030
             assert c.session_id == "0"
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(DeprecationWarning):  # noqa: PT030
             assert c.server_version == "(unknown)"
-        with pytest.warns(DeprecationWarning):
-            assert c.torrent_get_arguments == c._Client__torrent_get_arguments  # type: ignore[attr-defined]
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(DeprecationWarning):  # noqa: PT030
+            assert c.torrent_get_arguments == c._Client__torrent_get_arguments  # type: ignore[attr-defined]  # noqa: SLF001
+        with pytest.warns(DeprecationWarning):  # noqa: PT030
             assert c.raw_session == {}
 
 
@@ -242,10 +241,10 @@ def test_client_init_variations() -> None:
 
         # path fix
         c = Client(path="/transmission/")
-        assert c._path == "/transmission/rpc"
+        assert c._path == "/transmission/rpc"  # noqa: SLF001
 
         # Auth
-        c = Client(username="u", password="p")
+        c = Client(username="u", password="p")  # noqa: S106
 
         # HTTPS
         with mock.patch("transmission_rpc.client.urllib3.HTTPSConnectionPool") as mock_https:
@@ -257,7 +256,7 @@ def test_session_close_and_context_manager() -> None:
     """Cover remaining client methods (lifecycle parts) like session_close and context manager behavior."""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
-        c._request = mock.Mock()  # type: ignore[method-assign] # Needed because session_close calls it
+        c._request = mock.Mock()  # type: ignore[method-assign] # Needed because session_close calls it  # noqa: SLF001
 
         # session_close
         c.session_close()
@@ -285,7 +284,7 @@ def test_from_url_http() -> None:
     """Verify `from_url` correctly parses standard HTTP URLs."""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = from_url("http://127.0.0.1")
-        assert ":80" in c._url
+        assert ":80" in c._url  # noqa: SLF001
 
 
 def test_from_url_https() -> None:
@@ -296,7 +295,7 @@ def test_from_url_https() -> None:
         mock.patch.object(Client, "get_session", autospec=True),
     ):
         c = from_url("https://127.0.0.1")
-        assert ":443" in c._url
+        assert ":443" in c._url  # noqa: SLF001
 
 
 def test_from_url_http_unix() -> None:
@@ -307,26 +306,26 @@ def test_from_url_http_unix() -> None:
     ):
         c = from_url("http+unix://%2Ftmp%2Ftest")
         # host is unquoted to /tmp/test, but Client init uses localhost for _url host part
-        assert "http+unix://localhost" in c._url
+        assert "http+unix://localhost" in c._url  # noqa: SLF001
 
 
 def test_unix_http_connection() -> None:
     """Verify `UnixHTTPConnection` connects to the correct socket path."""
-    conn = UnixHTTPConnection("/tmp/sock")
+    conn = UnixHTTPConnection("/tmp/sock")  # noqa: S108
     with (
         mock.patch("socket.socket") as mock_socket_cls,
         mock.patch.object(socket, "AF_UNIX", create=True, new=1),
     ):
         mock_sock = mock_socket_cls.return_value
         conn.connect()
-        mock_sock.connect.assert_called_with("/tmp/sock")
+        mock_sock.connect.assert_called_with("/tmp/sock")  # noqa: S108
 
 
 def test_unix_http_connection_options() -> None:
     """Verify `UnixHTTPConnection` respects socket options and timeouts."""
     # Test with socket options and timeout
     conn = UnixHTTPConnection(
-        "/tmp/sock",
+        "/tmp/sock",  # noqa: S108
         socket_options=[(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)],
         timeout=10,
     )
@@ -338,12 +337,12 @@ def test_unix_http_connection_options() -> None:
         conn.connect()
         mock_sock.setsockopt.assert_called_with(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
         mock_sock.settimeout.assert_called_with(10)
-        mock_sock.connect.assert_called_with("/tmp/sock")
+        mock_sock.connect.assert_called_with("/tmp/sock")  # noqa: S108
 
 
 def test_unix_http_connection_pool_str() -> None:
     """Verify `UnixHTTPConnectionPool` string representation."""
-    pool = UnixHTTPConnectionPool(host="/tmp/sock")
+    pool = UnixHTTPConnectionPool(host="/tmp/sock")  # noqa: S108
     assert str(pool) == "UnixHTTPConnectionPool(host=/tmp/sock)"
 
 
@@ -402,7 +401,7 @@ def test_client_parse_url(
             path=path,
         )
 
-        assert client._url == f"{protocol}://{host}:{port}{urljoin(path, 'rpc')}"
+        assert client._url == f"{protocol}://{host}:{port}{urljoin(path, 'rpc')}"  # noqa: SLF001
 
 
 @pytest.mark.parametrize(

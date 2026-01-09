@@ -1,4 +1,3 @@
-# ruff: noqa: SLF001, S108
 import contextlib
 import io
 import json
@@ -22,8 +21,8 @@ def test_start_all_bypass_queue(client: Client) -> None:
     Verify that `start_all(bypass_queue=True)` correctly calls `torrent-start-now`
     after fetching the list of torrents.
     """
-    client._Client__http_client.request.reset_mock()  # type: ignore[attr-defined]
-    client._Client__http_client.request.side_effect = [  # type: ignore[attr-defined]
+    client._Client__http_client.request.reset_mock()  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.side_effect = [  # type: ignore[attr-defined] # noqa: SLF001
         mock.Mock(
             status=200,
             headers={},
@@ -38,7 +37,7 @@ def test_start_all_bypass_queue(client: Client) -> None:
 
 def test_get_torrent_with_args(client: Client) -> None:
     """Verify that `get_torrent` raises KeyError if the requested fields are not returned by the server."""
-    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined] # noqa: SLF001
         {"result": "success", "arguments": {"torrents": []}}
     ).encode()
     with pytest.raises(KeyError):
@@ -47,8 +46,8 @@ def test_get_torrent_with_args(client: Client) -> None:
 
 def test_change_torrent_warnings_v1_protocol(client: Client) -> None:
     """Verify warnings are issued when using `change_torrent` features not supported by the current server version."""
-    client._Client__protocol_version = 1  # type: ignore[attr-defined]
-    client._Client__http_client.request.return_value.data = json.dumps({"result": "success", "arguments": {}}).encode()  # type: ignore[attr-defined]
+    client._Client__protocol_version = 1  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.return_value.data = json.dumps({"result": "success", "arguments": {}}).encode()  # type: ignore[attr-defined] # noqa: SLF001
     with mock.patch.object(client.logger, "warning") as mock_warn:
         client.change_torrent(ids=1, tracker_list=[])
         mock_warn.assert_called()
@@ -65,8 +64,8 @@ def test_change_torrent_no_args(client: Client) -> None:
 
 def test_set_session_warnings_full(client: Client) -> None:
     """Verify warnings are issued when using `set_session` features not supported by the current server version."""
-    client._Client__protocol_version = 1  # type: ignore[attr-defined]
-    client._Client__http_client.request.return_value.data = json.dumps({"result": "success", "arguments": {}}).encode()  # type: ignore[attr-defined]
+    client._Client__protocol_version = 1  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.return_value.data = json.dumps({"result": "success", "arguments": {}}).encode()  # type: ignore[attr-defined] # noqa: SLF001
     with mock.patch.object(client.logger, "warning") as mock_warn:
         client.set_session(script_torrent_done_seeding_filename="f")
         mock_warn.assert_called()
@@ -83,8 +82,8 @@ def test_set_session_warnings_full(client: Client) -> None:
 
 def test_set_group_warning(client: Client) -> None:
     """Verify warning is issued when using `set_group` on a server version that doesn't support it."""
-    client._Client__protocol_version = 1  # type: ignore[attr-defined]
-    client._Client__http_client.request.return_value.data = json.dumps({"result": "success", "arguments": {}}).encode()  # type: ignore[attr-defined]
+    client._Client__protocol_version = 1  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.return_value.data = json.dumps({"result": "success", "arguments": {}}).encode()  # type: ignore[attr-defined] # noqa: SLF001
     with mock.patch.object(client.logger, "warning") as mock_warn:
         client.set_group("g")
         mock_warn.assert_called()
@@ -103,22 +102,22 @@ def test_change_torrent_warnings() -> None:
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         # Mock internal request method
-        c._request = mock.Mock()  # type: ignore[method-assign]
+        c._request = mock.Mock()  # type: ignore[method-assign] # noqa: SLF001
         c.logger = mock.Mock()  # type: ignore[method-assign]
         # Mock _rpc_version_warning to verify calls
-        c._rpc_version_warning = mock.Mock()  # type: ignore[method-assign]
+        c._rpc_version_warning = mock.Mock()  # type: ignore[method-assign] # noqa: SLF001
 
         # Test labels warning (v16)
         c.change_torrent(ids=1, labels=["a"])
-        c._rpc_version_warning.assert_any_call(16)
+        c._rpc_version_warning.assert_any_call(16)  # noqa: SLF001
 
         # Test group warning (v17)
         c.change_torrent(ids=1, group="g")
-        c._rpc_version_warning.assert_any_call(17)
+        c._rpc_version_warning.assert_any_call(17)  # noqa: SLF001
 
         # Test tracker_list warning (v17)
         c.change_torrent(ids=1, tracker_list=[["a"]])
-        c._rpc_version_warning.assert_any_call(17)
+        c._rpc_version_warning.assert_any_call(17)  # noqa: SLF001
 
 
 def test_groups_coverage() -> None:
@@ -126,11 +125,11 @@ def test_groups_coverage() -> None:
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
         # We need to mock _request to return something valid
-        c._request = mock.Mock(return_value={"group": [{"name": "test_g"}]})  # type: ignore[method-assign]
+        c._request = mock.Mock(return_value={"group": [{"name": "test_g"}]})  # type: ignore[method-assign] # noqa: SLF001
 
         # Test set_group
         c.set_group("test_g")
-        c._request.assert_called_with(mock.ANY, {"name": "test_g"}, timeout=None)
+        c._request.assert_called_with(mock.ANY, {"name": "test_g"}, timeout=None)  # noqa: SLF001
 
         # Test get_groups
         groups = c.get_groups()
@@ -142,12 +141,12 @@ def test_groups_coverage() -> None:
         assert g.name == "test_g"
 
         # Test get_group missing
-        c._request.return_value = {"group": []}
+        c._request.return_value = {"group": []}  # noqa: SLF001
         assert c.get_group("missing") is None
 
         # Test get_groups with list
         c.get_groups(["test_g"])
-        c._request.assert_called_with(mock.ANY, {"group": ["test_g"]}, timeout=None)
+        c._request.assert_called_with(mock.ANY, {"group": ["test_g"]}, timeout=None)  # noqa: SLF001
 
 
 def test_rpc_command_methods() -> None:
@@ -157,12 +156,12 @@ def test_rpc_command_methods() -> None:
     """
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
-        c._request = mock.Mock()  # type: ignore[method-assign]
+        c._request = mock.Mock()  # type: ignore[method-assign] # noqa: SLF001
 
         # start_all bypass_queue
-        c._request.return_value = {"torrents": []}
+        c._request.return_value = {"torrents": []}  # noqa: SLF001
         c.start_all(bypass_queue=True)
-        assert c._request.call_args[0][0] == "torrent-start-now"
+        assert c._request.call_args[0][0] == "torrent-start-now"  # noqa: SLF001
 
         # stop_torrent
         c.stop_torrent(ids=1)
@@ -171,7 +170,7 @@ def test_rpc_command_methods() -> None:
         c.reannounce_torrent(ids=1)
 
         # blocklist_update
-        c._request.return_value = {"blocklist-size": 10}
+        c._request.return_value = {"blocklist-size": 10}  # noqa: SLF001
         assert c.blocklist_update() == 10
 
 
@@ -179,7 +178,7 @@ def test_add_torrent_args() -> None:
     """Cover `add_torrent` arguments like labels, sequential_download, and bandwidthPriority."""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
-        c._request = mock.Mock(return_value={"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})  # type: ignore[method-assign]
+        c._request = mock.Mock(return_value={"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})  # type: ignore[method-assign] # noqa: SLF001
 
         # labels, sequential_download, bandwidthPriority
         c.add_torrent("magnet:?xt=urn:btih:a", labels=["l"], sequential_download=True, bandwidthPriority=1)
@@ -192,7 +191,7 @@ def test_client_method_edge_cases() -> None:
     """
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
-        c._request = mock.Mock()  # type: ignore[method-assign]
+        c._request = mock.Mock()  # type: ignore[method-assign] # noqa: SLF001
 
         # set_session invalid encryption
         with pytest.raises(ValueError, match="Invalid encryption value"):
@@ -200,28 +199,28 @@ def test_client_method_edge_cases() -> None:
 
         # start_torrent bypass_queue
         c.start_torrent(ids=1, bypass_queue=True)
-        assert c._request.call_args[0][0] == "torrent-start-now"
+        assert c._request.call_args[0][0] == "torrent-start-now"  # noqa: SLF001
 
         # get_torrents with arguments
-        c._request.return_value = {"torrents": []}
+        c._request.return_value = {"torrents": []}  # noqa: SLF001
         c.get_torrents(ids=1, arguments=["name"])
-        args = c._request.call_args[0][1]["fields"]
+        args = c._request.call_args[0][1]["fields"]  # noqa: SLF001
         assert "name" in args
         assert "id" in args
 
         # get_recently_active_torrents with arguments
-        c._request.return_value = {"torrents": [], "removed": []}
+        c._request.return_value = {"torrents": [], "removed": []}  # noqa: SLF001
         c.get_recently_active_torrents(arguments=["name"])
-        args = c._request.call_args[0][1]["fields"]
+        args = c._request.call_args[0][1]["fields"]  # noqa: SLF001
         assert "name" in args
 
         # free_space success
-        c._request.return_value = {"path": "/tmp", "size-bytes": 100}
-        assert c.free_space("/tmp") == 100
+        c._request.return_value = {"path": "/tmp", "size-bytes": 100}  # noqa: SLF001, S108
+        assert c.free_space("/tmp") == 100  # noqa: S108
 
         # free_space fail
-        c._request.return_value = {"path": "/other", "size-bytes": 0}
-        assert c.free_space("/tmp") is None
+        c._request.return_value = {"path": "/other", "size-bytes": 0}  # noqa: SLF001
+        assert c.free_space("/tmp") is None  # noqa: S108
 
 
 def test_add_torrent_types() -> None:
@@ -229,23 +228,23 @@ def test_add_torrent_types() -> None:
 
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
-        c._request = mock.Mock(return_value={"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})  # type: ignore[method-assign]
+        c._request = mock.Mock(return_value={"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})  # type: ignore[method-assign] # noqa: SLF001
 
         # bytes
         c.add_torrent(b"torrent content")
-        assert "metainfo" in c._request.call_args[0][1]
+        assert "metainfo" in c._request.call_args[0][1]  # noqa: SLF001
 
         # file-like
         f = io.BytesIO(b"torrent content")
         c.add_torrent(f)
-        assert "metainfo" in c._request.call_args[0][1]
+        assert "metainfo" in c._request.call_args[0][1]  # noqa: SLF001
 
         # Path (local file)
         # We need to mock path reading
         p = pathlib.Path("test.torrent")
         with mock.patch("pathlib.Path.read_bytes", return_value=b"content"):
             c.add_torrent(p)
-        assert "metainfo" in c._request.call_args[0][1]
+        assert "metainfo" in c._request.call_args[0][1]  # noqa: SLF001
 
 
 def test_add_torrent_empty_metadata_and_unknown_types() -> None:
@@ -255,7 +254,7 @@ def test_add_torrent_empty_metadata_and_unknown_types() -> None:
     """
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()
-        c._request = mock.Mock()  # type: ignore[method-assign]
+        c._request = mock.Mock()  # type: ignore[method-assign] # noqa: SLF001
 
         # 489: empty metadata
         with pytest.raises(ValueError, match="Torrent metadata is empty"):
@@ -266,17 +265,17 @@ def test_add_torrent_empty_metadata_and_unknown_types() -> None:
         obj = object()
         # It returns None, so code proceeds to: kwargs["filename"] = obj
         # Then calls _request.
-        c._request.return_value = {"torrent-added": {"id": 1}}
+        c._request.return_value = {"torrent-added": {"id": 1}}  # noqa: SLF001
         c.add_torrent(obj)  # type: ignore
 
         # start_all bypass_queue with torrents to fully exercise logic
-        c._request.side_effect = [
+        c._request.side_effect = [  # noqa: SLF001
             {"torrents": [{"id": 1, "hashString": "h", "queuePosition": 0}]},  # get_torrents
             {},  # start
         ]
         c.start_all(bypass_queue=True)
         # Check second call argument
-        assert c._request.call_args_list[-1][0][0] == "torrent-start-now"
+        assert c._request.call_args_list[-1][0][0] == "torrent-start-now"  # noqa: SLF001
 
     # Use a new client to test _request logic because we need the real _request to run
     # Client.get_session is already patched by the outer context if we are not careful
@@ -287,14 +286,14 @@ def test_add_torrent_empty_metadata_and_unknown_types() -> None:
         c2.logger = mock.Mock()
 
         # 1. SessionStats fallback (358)
-        c2._http_query = mock.Mock(  # type: ignore[method-assign]
+        c2._http_query = mock.Mock(  # type: ignore[method-assign] # noqa: SLF001
             return_value=json.dumps({"result": "success", "arguments": {"activeTorrentCount": 1}})
         )
         stats = c2.session_stats()
         assert stats.active_torrent_count == 1
 
         # 2. TorrentAdd logic (338)
-        c2._http_query.return_value = json.dumps(
+        c2._http_query.return_value = json.dumps(  # noqa: SLF001
             {"result": "success", "arguments": {"torrent-added": {"id": 1, "name": "n", "hashString": "h"}}}
         )
         # add_torrent calls _request. We pass 'magnet' so it doesn't try to read file.
@@ -302,7 +301,7 @@ def test_add_torrent_empty_metadata_and_unknown_types() -> None:
         assert t.id == 1
 
         # 3. get_torrent finding torrent (593-594)
-        c2._http_query.return_value = json.dumps(
+        c2._http_query.return_value = json.dumps(  # noqa: SLF001
             {"result": "success", "arguments": {"torrents": [{"id": 1, "name": "n", "hashString": "h"}]}}
         )
         t = c2.get_torrent(1)
@@ -311,7 +310,7 @@ def test_add_torrent_empty_metadata_and_unknown_types() -> None:
 
 def test_add_torrent_duplicate(client: Client) -> None:
     """Verify that `add_torrent` handles the 'torrent-duplicate' response correctly."""
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
         headers={},
         data=json.dumps(
@@ -324,7 +323,7 @@ def test_add_torrent_duplicate(client: Client) -> None:
 
 def test_add_torrent_invalid_response(client: Client) -> None:
     """Verify that `add_torrent` raises TransmissionError if the response doesn't contain 'torrent-added' or 'torrent-duplicate'."""
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {}}).encode()
     )
     with pytest.raises(TransmissionError, match="Invalid torrent-add response"):
@@ -333,7 +332,7 @@ def test_add_torrent_invalid_response(client: Client) -> None:
 
 def test_get_torrent_not_found(client: Client) -> None:
     """Verify that `get_torrent` raises KeyError if the returned list of torrents is empty."""
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"torrents": []}}).encode()
     )
     with pytest.raises(KeyError, match="Torrent not found"):
@@ -342,7 +341,7 @@ def test_get_torrent_not_found(client: Client) -> None:
 
 def test_session_stats_legacy(client: Client) -> None:
     """Verify `session_stats` compatibility with older response formats."""
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
         headers={},
         data=json.dumps(
@@ -367,7 +366,7 @@ def test_session_stats_legacy(client: Client) -> None:
 
 def test_free_space_path_mismatch(client: Client) -> None:
     """Verify `free_space` returns None if the returned path does not match the requested path."""
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
         headers={},
         data=json.dumps({"result": "success", "arguments": {"path": "/other", "size-bytes": 100}}).encode(),
@@ -377,7 +376,7 @@ def test_free_space_path_mismatch(client: Client) -> None:
 
 def test_get_group_none(client: Client) -> None:
     """Verify `get_group` returns None if the group is not found."""
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200, headers={}, data=json.dumps({"result": "success", "arguments": {"group": []}}).encode()
     )
     assert client.get_group("test") is None
@@ -389,7 +388,7 @@ def test_methods_returning_none(client: Client) -> None:
     execute without error and return None when the server responds with success.
     """
     # Set default success response
-    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined] # noqa: SLF001
         {
             "result": "success",
             "arguments": {},
@@ -402,7 +401,7 @@ def test_methods_returning_none(client: Client) -> None:
         ("stop_torrent", {"ids": 1}),
         ("verify_torrent", {"ids": 1}),
         ("reannounce_torrent", {"ids": 1}),
-        ("move_torrent_data", {"ids": 1, "location": "/tmp"}),
+        ("move_torrent_data", {"ids": 1, "location": "/tmp"}),  # noqa: S108
         ("queue_top", {"ids": 1}),
         ("queue_bottom", {"ids": 1}),
         ("queue_up", {"ids": 1}),
@@ -417,7 +416,7 @@ def test_methods_returning_none(client: Client) -> None:
 
 def test_change_torrent(client: Client) -> None:
     """Verify `change_torrent` executes successfully with valid arguments."""
-    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined] # noqa: SLF001
         {
             "result": "success",
             "arguments": {},
@@ -428,7 +427,7 @@ def test_change_torrent(client: Client) -> None:
 
 def test_rename_torrent_path(client: Client) -> None:
     """Verify `rename_torrent_path` executes successfully."""
-    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined] # noqa: SLF001
         {
             "result": "success",
             "arguments": {"path": "/a", "name": "b"},
@@ -439,7 +438,7 @@ def test_rename_torrent_path(client: Client) -> None:
 
 def test_blocklist_update_extended(client: Client) -> None:
     """Verify `blocklist_update` returns the blocklist size."""
-    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined] # noqa: SLF001
         {
             "result": "success",
             "arguments": {"blocklist-size": 10},
@@ -450,7 +449,7 @@ def test_blocklist_update_extended(client: Client) -> None:
 
 def test_port_test(client: Client) -> None:
     """Verify `port_test` returns the port status."""
-    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined] # noqa: SLF001
         {
             "result": "success",
             "arguments": {"port-is-open": True, "ip_protocol": "ipv4"},
@@ -461,7 +460,7 @@ def test_port_test(client: Client) -> None:
 
 def test_get_recently_active_torrents_extended(client: Client) -> None:
     """Verify `get_recently_active_torrents` executes successfully."""
-    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined] # noqa: SLF001
         {
             "result": "success",
             "arguments": {"torrents": [], "removed": []},
@@ -472,7 +471,7 @@ def test_get_recently_active_torrents_extended(client: Client) -> None:
 
 def test_get_groups_extended(client: Client) -> None:
     """Verify `get_groups` executes successfully."""
-    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value.data = json.dumps(  # type: ignore[attr-defined] # noqa: SLF001
         {
             "result": "success",
             "arguments": {"group": []},
@@ -486,9 +485,9 @@ def test_start_all_extended(client: Client) -> None:
     Verify `start_all` logic with multiple torrents:
     it sorts them by queue position and then calls start.
     """
-    client._Client__http_client.request.reset_mock()  # type: ignore[attr-defined]
+    client._Client__http_client.request.reset_mock()  # type: ignore[attr-defined] # noqa: SLF001
     # start_all calls get_torrents first to sort by queue position
-    client._Client__http_client.request.side_effect = [  # type: ignore[attr-defined]
+    client._Client__http_client.request.side_effect = [  # type: ignore[attr-defined] # noqa: SLF001
         # 1. get_torrents response
         mock.Mock(
             status=200,
@@ -511,22 +510,22 @@ def test_start_all_extended(client: Client) -> None:
     client.start_all()
     # Should call start with ids [2, 1] because 2 has pos 1, 1 has pos 2.
     # The last call should be start.
-    assert client._Client__http_client.request.call_count == 2  # type: ignore[attr-defined]
+    assert client._Client__http_client.request.call_count == 2  # type: ignore[attr-defined] # noqa: SLF001
 
 
 def test_rpc_version_warning(client: Client) -> None:
     """Verify that `_rpc_version_warning` emits a warning when protocol version is too low."""
     # Set low protocol version
-    client._Client__protocol_version = 1  # type: ignore[attr-defined]
+    client._Client__protocol_version = 1  # type: ignore[attr-defined] # noqa: SLF001
     with mock.patch.object(client.logger, "warning") as mock_warn:
-        client._rpc_version_warning(2)
+        client._rpc_version_warning(2)  # noqa: SLF001
         mock_warn.assert_called()
 
 
 def test_set_session_warnings_extended(client: Client) -> None:
     """Verify that `set_session` emits warnings for features not supported by the current server version."""
-    client._Client__protocol_version = 16  # type: ignore[attr-defined]
-    client._Client__http_client.request.return_value.data = json.dumps({"result": "success", "arguments": {}}).encode()  # type: ignore[attr-defined]
+    client._Client__protocol_version = 16  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.return_value.data = json.dumps({"result": "success", "arguments": {}}).encode()  # type: ignore[attr-defined] # noqa: SLF001
     with mock.patch.object(client.logger, "warning") as mock_warn:
         client.set_session(default_trackers=["a"])
         mock_warn.assert_called()
@@ -534,8 +533,8 @@ def test_set_session_warnings_extended(client: Client) -> None:
 
 def test_change_torrent_warnings_v15_protocol(client: Client) -> None:
     """Verify that `change_torrent` emits warnings for features not supported by the current server version."""
-    client._Client__protocol_version = 15  # type: ignore[attr-defined]
-    client._Client__http_client.request.return_value.data = json.dumps({"result": "success", "arguments": {}}).encode()  # type: ignore[attr-defined]
+    client._Client__protocol_version = 15  # type: ignore[attr-defined] # noqa: SLF001
+    client._Client__http_client.request.return_value.data = json.dumps({"result": "success", "arguments": {}}).encode()  # type: ignore[attr-defined] # noqa: SLF001
     with mock.patch.object(client.logger, "warning") as mock_warn:
         client.change_torrent(ids=1, labels=["a"])
         mock_warn.assert_called()
@@ -564,7 +563,7 @@ def test_parsing_ids(client: Client) -> None:
 
     # 90: valid hash string
     h = "a" * 40
-    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined]
+    client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
         headers={},
         data=json.dumps({"result": "success", "arguments": {"torrents": []}}).encode(),

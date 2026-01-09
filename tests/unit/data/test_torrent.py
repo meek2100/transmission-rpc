@@ -1,4 +1,3 @@
-# ruff: noqa: SLF001
 import calendar
 import contextlib
 import datetime
@@ -64,7 +63,7 @@ def test_torrent_misc_properties() -> None:
     }
     t = Torrent(fields=fields)
     assert t.seed_idle_mode.value == 0
-    assert t._status_str == "downloading"
+    assert t._status_str == "downloading"  # noqa: SLF001
 
 
 def test_torrent_calculated_properties_and_defaults() -> None:
