@@ -31,7 +31,6 @@ def test_session_default_trackers() -> None:
     Verify that `default_trackers` property correctly parses newline-separated strings
     into a list, and handles missing values.
     """
-    """Cover session default_trackers property"""
     s = Session(fields={"default-trackers": "t1\nt2"})
     assert s.default_trackers == ["t1", "t2"]
 
@@ -39,15 +38,11 @@ def test_session_default_trackers() -> None:
     assert s2.default_trackers is None
 
 
-def test_session_default_trackers_branches() -> None:
+def test_session_default_trackers_list_input() -> None:
     """
     Verify `default_trackers` handles different input formats:
     - Newline-separated string.
     - Pre-existing list.
-    """
-    """
-    Test branches in default_trackers property.
-    Existing tests only cover the None case.
     """
     # Case 1: default-trackers is a newline-separated string
     s1 = Session(fields={"default-trackers": "http://t1.com\nhttp://t2.com"})
@@ -61,8 +56,6 @@ def test_session_default_trackers_branches() -> None:
 def test_script_torrent_added_filename() -> None:
     """
     Verify that `script_torrent_added_filename` is correctly retrieved from fields.
-    """
-    """
     Explicitly test script_torrent_added_filename to ensure coverage
     at the reported line 372.
     """

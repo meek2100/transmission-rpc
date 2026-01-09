@@ -65,8 +65,8 @@ def test_ensure_location_str() -> None:
 def test_ensure_location_str_error() -> None:
     """
     Verify that `ensure_location_str` raises ValueError if the path is relative.
+    Cover ensure_location_str relative path error
     """
-    """Cover ensure_location_str relative path error"""
     p = pathlib.Path("relative/path")
     with pytest.raises(ValueError, match=r"using relative `pathlib.Path`"):
         ensure_location_str(p)

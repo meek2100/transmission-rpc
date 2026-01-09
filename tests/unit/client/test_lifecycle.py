@@ -132,27 +132,31 @@ def test_client_init_no_auth(mock_http_client: Any) -> None:
     assert "Authorization" not in headers
 
 
-def test_client_init_timeout(mock_http_client: Any) -> None:
-    """Verify that initializing Client with a float or int timeout sets the timeout correctly."""
+def test_client_init_timeout_parsing(mock_http_client: Any) -> None:
+    """
+    Verify that initializing Client with different timeout types (float, int, Timeout object, None)
+    behaves as expected, and raises TypeError for invalid types.
+    """
+    # Float
     c = Client(timeout=10.0)
     assert c.timeout is not None
     assert c.timeout.total == 10.0
-    c2 = Client(timeout=10)
-    assert c2.timeout is not None
-    assert c2.timeout.total == 10.0
 
+    # Int
+    c = Client(timeout=10)
+    assert c.timeout is not None
+    assert c.timeout.total == 10.0
 
-def test_client_init_timeout_types(mock_http_client: Any) -> None:
-    """
-    Verify that initializing Client with different timeout types (Timeout object, None, invalid) behaves as expected.
-    """
+    # Timeout object
     c = Client(timeout=Timeout(10))
     assert c.timeout is not None
     assert c.timeout.total == 10
 
+    # None
     c = Client(timeout=None)
     assert c.timeout is None
 
+    # Invalid
     with pytest.raises(TypeError, match="unsupported value"):
         Client(timeout="invalid")  # type: ignore[arg-type]
 
@@ -247,7 +251,7 @@ def test_client_init_variations() -> None:
             mock_https.assert_called()
 
 
-def test_more_client_methods_lifecycle() -> None:
+def test_session_close_and_context_manager() -> None:
     """Cover remaining client methods (lifecycle parts) like session_close and context manager behavior."""
     with mock.patch.object(Client, "get_session", autospec=True):
         c = Client()

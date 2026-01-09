@@ -45,7 +45,7 @@ def test_get_torrent_with_args(client: Client) -> None:
         client.get_torrent(1, arguments=["id", "name"])
 
 
-def test_change_torrent_warnings_full(client: Client) -> None:
+def test_change_torrent_warnings_v1_protocol(client: Client) -> None:
     """Verify warnings are issued when using `change_torrent` features not supported by the current server version."""
     client._Client__protocol_version = 1  # type: ignore[attr-defined]
     client._Client__http_client.request.return_value.data = json.dumps({"result": "success", "arguments": {}}).encode()  # type: ignore[attr-defined]
@@ -532,7 +532,7 @@ def test_set_session_warnings_extended(client: Client) -> None:
         mock_warn.assert_called()
 
 
-def test_change_torrent_warnings_extended(client: Client) -> None:
+def test_change_torrent_warnings_v15_protocol(client: Client) -> None:
     """Verify that `change_torrent` emits warnings for features not supported by the current server version."""
     client._Client__protocol_version = 15  # type: ignore[attr-defined]
     client._Client__http_client.request.return_value.data = json.dumps({"result": "success", "arguments": {}}).encode()  # type: ignore[attr-defined]

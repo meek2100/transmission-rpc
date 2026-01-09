@@ -20,6 +20,12 @@ def check_properties(cls: type, obj: Any) -> None:
                 getattr(obj, prop)
 
 
+def assert_property_exception(exception, ob, prop):
+    """Helper to assert that accessing a property raises a specific exception."""
+    with pytest.raises(exception):
+        getattr(ob, prop)
+
+
 def test_torrent_missing_optional_fields() -> None:
     # files present but priorities/wanted missing
     fields = {
@@ -61,8 +67,9 @@ def test_torrent_misc_properties() -> None:
     assert t._status_str == "downloading"
 
 
-def test_torrent_methods_and_props() -> None:
-    """Cover misc torrent methods and properties"""
+def test_torrent_calculated_properties_and_defaults() -> None:
+    """Cover calculated torrent methods, properties, and default values from different field sets."""
+    # 1. Extensive fields test
     fields = {
         "id": 1,
         "name": "test",
@@ -188,6 +195,73 @@ def test_torrent_methods_and_props() -> None:
     with pytest.raises(ValueError, match="requires field 'id'"):
         Torrent(fields={})
 
+    # 2. Minimal fields (asserting exceptions)
+    torrent_minimal = transmission_rpc.Torrent(fields={"id": 42})
+    assert torrent_minimal.id == 42
+    assert_property_exception(KeyError, torrent_minimal, "status")
+    assert_property_exception(KeyError, torrent_minimal, "progress")
+    assert_property_exception(KeyError, torrent_minimal, "ratio")
+    assert_property_exception(KeyError, torrent_minimal, "eta")
+    assert_property_exception(KeyError, torrent_minimal, "activity_date")
+    assert_property_exception(KeyError, torrent_minimal, "added_date")
+    assert_property_exception(KeyError, torrent_minimal, "start_date")
+    assert_property_exception(KeyError, torrent_minimal, "done_date")
+
+    with pytest.raises(KeyError):
+        torrent_minimal.format_eta()
+    with pytest.raises(KeyError):
+        torrent_minimal.get_files()
+
+    # 3. Date fields and specific property checks (from old test_attributes)
+    data_full = {
+        "id": 1,
+        "status": 4,
+        "sizeWhenDone": 1000,
+        "leftUntilDone": 500,
+        "uploadedEver": 1000,
+        "downloadedEver": 2000,
+        "uploadRatio": 0.5,
+        "eta": 3600,
+        "percentDone": 0.5,
+        "activityDate": calendar.timegm((2008, 12, 11, 11, 15, 30, 0, 0, -1)),
+        "addedDate": calendar.timegm((2008, 12, 11, 8, 5, 10, 0, 0, -1)),
+        "startDate": calendar.timegm((2008, 12, 11, 9, 10, 5, 0, 0, -1)),
+        "doneDate": calendar.timegm((2008, 12, 11, 10, 0, 15, 0, 0, -1)),
+    }
+
+    torrent_dates = transmission_rpc.Torrent(fields=data_full)
+    assert torrent_dates.id == 1
+    assert torrent_dates.left_until_done == 500
+    assert torrent_dates.status == "downloading"
+    assert torrent_dates.status.downloading
+    assert torrent_dates.progress == 50.0
+    assert torrent_dates.ratio == 0.5
+    assert torrent_dates.eta == datetime.timedelta(seconds=3600)
+    assert torrent_dates.activity_date == datetime.datetime(2008, 12, 11, 11, 15, 30, tzinfo=datetime.timezone.utc)
+    assert torrent_dates.added_date == datetime.datetime(2008, 12, 11, 8, 5, 10, tzinfo=datetime.timezone.utc)
+    assert torrent_dates.start_date == datetime.datetime(2008, 12, 11, 9, 10, 5, tzinfo=datetime.timezone.utc)
+    assert torrent_dates.done_date == datetime.datetime(2008, 12, 11, 10, 0, 15, tzinfo=datetime.timezone.utc)
+    assert torrent_dates.format_eta() == transmission_rpc.utils.format_timedelta(torrent_dates.eta)
+
+    # 4. Zero date check
+    data_zero_date = {
+        "id": 1,
+        "status": 4,
+        "sizeWhenDone": 1000,
+        "leftUntilDone": 500,
+        "uploadedEver": 1000,
+        "downloadedEver": 2000,
+        "uploadRatio": 0.5,
+        "eta": 3600,
+        "activityDate": time.mktime((2008, 12, 11, 11, 15, 30, 0, 0, -1)),
+        "addedDate": time.mktime((2008, 12, 11, 8, 5, 10, 0, 0, -1)),
+        "startDate": time.mktime((2008, 12, 11, 9, 10, 5, 0, 0, -1)),
+        "doneDate": 0,
+    }
+
+    torrent_zero = transmission_rpc.Torrent(fields=data_zero_date)
+    assert torrent_zero.done_date is None
+
 
 def test_torrent_properties_access() -> None:
     t = Torrent(fields={"id": 1})
@@ -251,12 +325,6 @@ def test_status_unknown() -> None:
     assert get_status(999) == "unknown status 999"
 
 
-def assert_property_exception(exception, ob, prop):
-    """Helper to assert that accessing a property raises a specific exception."""
-    with pytest.raises(exception):
-        getattr(ob, prop)
-
-
 def test_non_active():
     """
     Verify that a Torrent object correctly handles the 'activityDate' field being 0 (non-active).
@@ -268,74 +336,3 @@ def test_non_active():
 
     torrent = transmission_rpc.Torrent(fields=data)
     assert torrent.activity_date
-
-
-def test_attributes():
-    """
-    Verify that Torrent attributes are correctly populated from the 'fields' dictionary
-    and that accessing missing fields raises KeyError.
-    """
-    torrent = transmission_rpc.Torrent(fields={"id": 42})
-    assert torrent.id == 42
-    assert_property_exception(KeyError, torrent, "status")
-    assert_property_exception(KeyError, torrent, "progress")
-    assert_property_exception(KeyError, torrent, "ratio")
-    assert_property_exception(KeyError, torrent, "eta")
-    assert_property_exception(KeyError, torrent, "activity_date")
-    assert_property_exception(KeyError, torrent, "added_date")
-    assert_property_exception(KeyError, torrent, "start_date")
-    assert_property_exception(KeyError, torrent, "done_date")
-
-    with pytest.raises(KeyError):
-        torrent.format_eta()
-    with pytest.raises(KeyError):
-        torrent.get_files()
-
-    data = {
-        "id": 1,
-        "status": 4,
-        "sizeWhenDone": 1000,
-        "leftUntilDone": 500,
-        "uploadedEver": 1000,
-        "downloadedEver": 2000,
-        "uploadRatio": 0.5,
-        "eta": 3600,
-        "percentDone": 0.5,
-        "activityDate": calendar.timegm((2008, 12, 11, 11, 15, 30, 0, 0, -1)),
-        "addedDate": calendar.timegm((2008, 12, 11, 8, 5, 10, 0, 0, -1)),
-        "startDate": calendar.timegm((2008, 12, 11, 9, 10, 5, 0, 0, -1)),
-        "doneDate": calendar.timegm((2008, 12, 11, 10, 0, 15, 0, 0, -1)),
-    }
-
-    torrent = transmission_rpc.Torrent(fields=data)
-    assert torrent.id == 1
-    assert torrent.left_until_done == 500
-    assert torrent.status == "downloading"
-    assert torrent.status.downloading
-    assert torrent.progress == 50.0
-    assert torrent.ratio == 0.5
-    assert torrent.eta == datetime.timedelta(seconds=3600)
-    assert torrent.activity_date == datetime.datetime(2008, 12, 11, 11, 15, 30, tzinfo=datetime.timezone.utc)
-    assert torrent.added_date == datetime.datetime(2008, 12, 11, 8, 5, 10, tzinfo=datetime.timezone.utc)
-    assert torrent.start_date == datetime.datetime(2008, 12, 11, 9, 10, 5, tzinfo=datetime.timezone.utc)
-    assert torrent.done_date == datetime.datetime(2008, 12, 11, 10, 0, 15, tzinfo=datetime.timezone.utc)
-
-    assert torrent.format_eta() == transmission_rpc.utils.format_timedelta(torrent.eta)
-
-    data = {
-        "id": 1,
-        "status": 4,
-        "sizeWhenDone": 1000,
-        "leftUntilDone": 500,
-        "uploadedEver": 1000,
-        "downloadedEver": 2000,
-        "uploadRatio": 0.5,
-        "eta": 3600,
-        "activityDate": time.mktime((2008, 12, 11, 11, 15, 30, 0, 0, -1)),
-        "addedDate": time.mktime((2008, 12, 11, 8, 5, 10, 0, 0, -1)),
-        "startDate": time.mktime((2008, 12, 11, 9, 10, 5, 0, 0, -1)),
-        "doneDate": 0,
-    }
-
-    torrent = transmission_rpc.Torrent(fields=data)
-    assert torrent.done_date is None
