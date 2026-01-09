@@ -55,12 +55,10 @@ def test_single_str_as_list() -> None:
 
 
 def test_ensure_location_str() -> None:
-    """
-    Verify that `ensure_location_str` converts a Path object to a string.
-    """
-    # Only test the Path branch as str is trivial
+    """Verify that ensure_location_str handles Path objects and strings correctly."""
     p = pathlib.Path.cwd() / "tmp"
     assert ensure_location_str(p) == str(p)
+    assert ensure_location_str("/already/string") == "/already/string"
 
 
 def test_ensure_location_str_error() -> None:

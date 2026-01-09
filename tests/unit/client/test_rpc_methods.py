@@ -256,11 +256,11 @@ def test_add_torrent_empty_metadata_and_unknown_types() -> None:
         c = Client()
         c._request = mock.Mock()  # type: ignore[method-assign] # noqa: SLF001
 
-        # 489: empty metadata
+        # Test handling of empty metadata
         with pytest.raises(ValueError, match="Torrent metadata is empty"):
             c.add_torrent(b"")
 
-        # 1255: _try_read_torrent returns None for unknown type
+        # Test _try_read_torrent returns None for unknown type
         # We pass an object that is not str/Path/bytes/read
         obj = object()
         # It returns None, so code proceeds to: kwargs["filename"] = obj
@@ -285,14 +285,14 @@ def test_add_torrent_empty_metadata_and_unknown_types() -> None:
         c2 = Client()
         c2.logger = mock.Mock()
 
-        # 1. SessionStats fallback (358)
+        # 1. SessionStats fallback
         c2._http_query = mock.Mock(  # type: ignore[method-assign] # noqa: SLF001
             return_value=json.dumps({"result": "success", "arguments": {"activeTorrentCount": 1}})
         )
         stats = c2.session_stats()
         assert stats.active_torrent_count == 1
 
-        # 2. TorrentAdd logic (338)
+        # 2. TorrentAdd logic
         c2._http_query.return_value = json.dumps(  # noqa: SLF001
             {"result": "success", "arguments": {"torrent-added": {"id": 1, "name": "n", "hashString": "h"}}}
         )
@@ -300,7 +300,7 @@ def test_add_torrent_empty_metadata_and_unknown_types() -> None:
         t = c2.add_torrent("magnet:?xt=urn:btih:h")
         assert t.id == 1
 
-        # 3. get_torrent finding torrent (593-594)
+        # 3. get_torrent finding torrent
         c2._http_query.return_value = json.dumps(  # noqa: SLF001
             {"result": "success", "arguments": {"torrents": [{"id": 1, "name": "n", "hashString": "h"}]}}
         )
@@ -547,21 +547,21 @@ def test_parsing_ids(client: Client) -> None:
     - Invalid hex characters.
     - Invalid types (e.g., objects, float).
     """
-    # 75: invalid hex string length
+    # Test invalid hex string length
     with pytest.raises(ValueError, match="not valid torrent id"):
         client.get_torrent("a")  # length != 40
 
-    # 75: invalid hex string content
+    # Test invalid hex string content
     with pytest.raises(ValueError, match="not valid torrent id"):
         client.get_torrent("z" * 40)
 
-    # 77: invalid type for _parse_torrent_id (called via get_torrent -> _parse_torrent_ids -> _parse_torrent_id)
+    # Test invalid type for _parse_torrent_id (called via get_torrent -> _parse_torrent_ids -> _parse_torrent_id)
     # Wait, _parse_torrent_ids handles int, str, list.
     # If list has invalid type?
     with pytest.raises(ValueError, match="is not valid torrent id"):
         client.start_torrent(ids=[object()])  # type: ignore
 
-    # 90: valid hash string
+    # Test valid hash string
     h = "a" * 40
     client._Client__http_client.request.return_value = mock.Mock(  # type: ignore[attr-defined] # noqa: SLF001
         status=200,
@@ -571,7 +571,7 @@ def test_parsing_ids(client: Client) -> None:
     with contextlib.suppress(KeyError):
         client.get_torrent(h)
 
-    # 93: invalid type for _parse_torrent_ids (e.g. float)
+    # Test invalid type for _parse_torrent_ids (e.g. float)
     with pytest.raises(ValueError, match="Invalid torrent id"):
         client.start_torrent(ids=1.5)  # type: ignore
 

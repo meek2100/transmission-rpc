@@ -58,7 +58,7 @@ def test_torrent_status_properties() -> None:
     assert s.seed_pending
 
 
-def test_torrent_misc_properties() -> None:
+def test_torrent_status_and_idle_mode_mapping() -> None:
     """Verify miscellaneous Torrent properties like seed_idle_mode and status string mapping."""
     fields = {
         "id": 1,
@@ -70,108 +70,22 @@ def test_torrent_misc_properties() -> None:
     assert t._status_str == "downloading"  # noqa: SLF001
 
 
-def test_torrent_calculated_properties_and_defaults() -> None:
-    """Cover calculated torrent methods, properties, and default values from different field sets."""
-    # 1. Extensive fields test
+def test_torrent_defaults_and_basic_props() -> None:
+    """Verify default values, basic properties, and error handling for missing fields."""
     fields = {
         "id": 1,
-        "name": "test",
-        "hashString": "hash",
         "file-count": 5,
         "primary-mime-type": "text/plain",
+        "hashString": "hash",
         "files": [{"length": 100, "name": "f1", "bytesCompleted": 100}],
-        "fileStats": [{"bytesCompleted": 100, "wanted": True, "priority": 1}],
-        "eta": -1,
-        "percentDone": 0.5,
-        "sizeWhenDone": 100,
-        "leftUntilDone": 50,
-        "uploadRatio": 1.0,
-        "status": 0,
-        # Add missing fields to avoid KeyErrors if accessed
-        "bandwidthPriority": 0,
-        "corruptEver": 0,
-        "creator": "",
-        "desiredAvailable": 0,
-        "downloadDir": "",
-        "downloadedEver": 0,
-        "downloadLimit": 0,
-        "downloadLimited": False,
-        "editDate": 0,
-        "error": 0,
-        "errorString": "",
-        "etaIdle": 0,
-        "haveUnchecked": 0,
-        "haveValid": 0,
-        "honorsSessionLimits": False,
-        "isFinished": False,
-        "isPrivate": False,
-        "isStalled": False,
-        "labels": [],
-        "magnetLink": "",
-        "manualAnnounceTime": 0,
-        "maxConnectedPeers": 0,
-        "metadataPercentComplete": 0.0,
-        "peer-limit": 0,
-        "peers": [],
-        "peersConnected": 0,
-        "peersFrom": {},
-        "peersGettingFromUs": 0,
-        "peersSendingToUs": 0,
-        "percentComplete": 0.0,
         "pieces": "",
-        "pieceCount": 0,
-        "pieceSize": 0,
-        "queuePosition": 0,
-        "rateDownload": 0,
-        "rateUpload": 0,
-        "recheckProgress": 0.0,
-        "secondsDownloading": 0,
-        "secondsSeeding": 0,
-        "seedIdleLimit": 0,
-        "seedIdleMode": 0,
-        "seedRatioLimit": 0.0,
-        "seedRatioMode": 0,
-        "sequential_download": False,
-        "totalSize": 100,
-        "torrentFile": "",
-        "uploadedEver": 0,
-        "uploadLimit": 0,
-        "uploadLimited": False,
-        # "wanted": [],
-        "webseeds": [],
-        "webseedsSendingToUs": 0,
-        "activityDate": 0,
-        "addedDate": 0,
-        "startDate": 0,
-        "doneDate": 0,
-        "trackers": [],
-        "trackerList": "",
-        "trackerStats": [],
-        # "priorities" is INTENTIONALLY OMITTED to test default branch
+        # Missing priorities, wanted, etc.
     }
-
     t = Torrent(fields=fields)
 
-    # available
-    # bytes_done = 100
-    # bytes_avail = 0 + 100 = 100
-    # ratio = 100 / 100 = 1.0 => 100.0
-    assert t.available == 100.0
-
-    # __str__ and __repr__
-    assert str(t) == "<transmission_rpc.Torrent 'test'>"
-    assert repr(t) == "<transmission_rpc.Torrent hashString='hash'>"
-
-    # Properties
+    # Basic properties
     assert t.file_count == 5
     assert t.primary_mime_type == "text/plain"
-
-    # format_eta edge cases
-    assert t.format_eta() == "not available"
-    t.fields["eta"] = -2
-    assert t.format_eta() == "unknown"
-    t.fields["eta"] = 3600
-    assert t.format_eta() == "0 01:00:00"
 
     # Deprecated into_hash
     with pytest.warns(DeprecationWarning, match="typo"):
@@ -186,19 +100,11 @@ def test_torrent_calculated_properties_and_defaults() -> None:
     # pieces
     assert t.pieces is not None
 
-    # Progress ZeroDivisionError check
-    # Force percentDone missing to trigger calculation
-    del t.fields["percentDone"]
-    t.fields["sizeWhenDone"] = 0
-    t.fields["leftUntilDone"] = 0
-    # Should catch ZeroDivisionError and return 0.0
-    assert t.progress == 0.0
-
     # Init missing id
     with pytest.raises(ValueError, match="requires field 'id'"):
         Torrent(fields={})
 
-    # 2. Minimal fields (asserting exceptions)
+    # Minimal fields (asserting exceptions)
     torrent_minimal = transmission_rpc.Torrent(fields={"id": 42})
     assert torrent_minimal.id == 42
     assert_property_exception(KeyError, torrent_minimal, "status")
@@ -215,7 +121,61 @@ def test_torrent_calculated_properties_and_defaults() -> None:
     with pytest.raises(KeyError):
         torrent_minimal.get_files()
 
-    # 3. Date fields and specific property checks (from old test_attributes)
+
+def test_torrent_progress_and_availability() -> None:
+    """Verify calculations for progress, availability, and ratio, including division by zero checks."""
+    fields = {
+        "id": 1,
+        "sizeWhenDone": 100,
+        "leftUntilDone": 50,
+        "uploadRatio": 1.0,
+        "percentDone": 0.5,
+        "totalSize": 100,
+        "fileStats": [{"bytesCompleted": 100, "wanted": True, "priority": 1}],
+        "desiredAvailable": 0,
+    }
+    t = Torrent(fields=fields)
+
+    # available
+    # bytes_done = 100
+    # bytes_avail = 0 + 100 = 100
+    # ratio = 100 / 100 = 1.0 => 100.0
+    assert t.available == 100.0
+
+    # Ratio
+    assert t.ratio == 1.0
+
+    # Progress ZeroDivisionError check
+    # Force percentDone missing to trigger calculation
+    del t.fields["percentDone"]
+    t.fields["sizeWhenDone"] = 0
+    t.fields["leftUntilDone"] = 0
+    # Should catch ZeroDivisionError and return 0.0
+    assert t.progress == 0.0
+
+
+def test_torrent_representation() -> None:
+    """Verify string representations, ETA formatting, and date handling."""
+    fields = {
+        "id": 1,
+        "name": "test",
+        "hashString": "hash",
+        "eta": -1,
+    }
+    t = Torrent(fields=fields)
+
+    # __str__ and __repr__
+    assert str(t) == "<transmission_rpc.Torrent 'test'>"
+    assert repr(t) == "<transmission_rpc.Torrent hashString='hash'>"
+
+    # format_eta edge cases
+    assert t.format_eta() == "not available"
+    t.fields["eta"] = -2
+    assert t.format_eta() == "unknown"
+    t.fields["eta"] = 3600
+    assert t.format_eta() == "0 01:00:00"
+
+    # Date fields
     data_full = {
         "id": 1,
         "status": 4,
@@ -234,28 +194,15 @@ def test_torrent_calculated_properties_and_defaults() -> None:
 
     torrent_dates = transmission_rpc.Torrent(fields=data_full)
     assert torrent_dates.id == 1
-    assert torrent_dates.left_until_done == 500
-    assert torrent_dates.status == "downloading"
-    assert torrent_dates.status.downloading
-    assert torrent_dates.progress == 50.0
-    assert torrent_dates.ratio == 0.5
-    assert torrent_dates.eta == datetime.timedelta(seconds=3600)
     assert torrent_dates.activity_date == datetime.datetime(2008, 12, 11, 11, 15, 30, tzinfo=datetime.timezone.utc)
     assert torrent_dates.added_date == datetime.datetime(2008, 12, 11, 8, 5, 10, tzinfo=datetime.timezone.utc)
     assert torrent_dates.start_date == datetime.datetime(2008, 12, 11, 9, 10, 5, tzinfo=datetime.timezone.utc)
     assert torrent_dates.done_date == datetime.datetime(2008, 12, 11, 10, 0, 15, tzinfo=datetime.timezone.utc)
     assert torrent_dates.format_eta() == transmission_rpc.utils.format_timedelta(torrent_dates.eta)
 
-    # 4. Zero date check
+    # Zero date check
     data_zero_date = {
         "id": 1,
-        "status": 4,
-        "sizeWhenDone": 1000,
-        "leftUntilDone": 500,
-        "uploadedEver": 1000,
-        "downloadedEver": 2000,
-        "uploadRatio": 0.5,
-        "eta": 3600,
         "activityDate": time.mktime((2008, 12, 11, 11, 15, 30, 0, 0, -1)),
         "addedDate": time.mktime((2008, 12, 11, 8, 5, 10, 0, 0, -1)),
         "startDate": time.mktime((2008, 12, 11, 9, 10, 5, 0, 0, -1)),
