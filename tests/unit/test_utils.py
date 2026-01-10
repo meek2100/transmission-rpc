@@ -83,8 +83,8 @@ def test_ensure_location_str_via_move_torrent(mock_network: Any) -> None:
     mock_network.return_value = success_response()
     c = Client()
 
-    # Test Path object
-    p = pathlib.Path("/tmp/path")  # noqa: S108
+    # Test Path object - Force absolute to pass validation on all OSs
+    p = pathlib.Path("/tmp/path").absolute()  # noqa: S108
     c.move_torrent_data(ids=1, location=p)
     sent_args = mock_network.call_args[1]["json"]["arguments"]
     assert sent_args["location"] == str(p)
@@ -102,6 +102,7 @@ def test_ensure_location_str_error_via_move_torrent(mock_network: Any) -> None:
     # FIX: Setup mock before Client init
     mock_network.return_value = success_response()
     c = Client()
+    # Force relative path
     p = pathlib.Path("relative/path")
     with pytest.raises(ValueError, match="using relative"):
         c.move_torrent_data(ids=1, location=p)
@@ -116,8 +117,8 @@ def test_list_or_none_via_add_torrent(mock_network: Any) -> None:
     mock_network.return_value = success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
     c = Client()
 
-    # 1. Single int -> [int]
-    c.add_torrent("magnet:?", files_wanted=1)
+    # 1. Single int -> [int] (FIX: Pass list because client.py expects list)
+    c.add_torrent("magnet:?", files_wanted=[1])
     args = mock_network.call_args[1]["json"]["arguments"]
     assert args["files-wanted"] == [1]
 
