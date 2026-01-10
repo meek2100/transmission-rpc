@@ -235,7 +235,9 @@ def test_rpc_command_methods(mock_network: Any) -> None:
     """Verify execution of client command methods."""
     mock_network.side_effect = [
         success_response(),  # init
-        success_response({"torrents": []}),  # start_all
+        # FIX: return a valid torrent for start_all to operate on
+        success_response({"torrents": [{"id": 1, "queuePosition": 0, "hashString": "h"}]}),  # start_all (get)
+        success_response(),  # start_all (start)
         success_response(),  # stop
         success_response(),  # reannounce
         success_response({"blocklist-size": 10}),  # blocklist
@@ -322,7 +324,8 @@ def test_add_torrent_types(mock_network: Any) -> None:
 
 def test_add_torrent_empty_metadata_and_unknown_types(mock_network: Any) -> None:
     """Verify `add_torrent` raises ValueError for empty metadata or unknown input types."""
-    mock_network.return_value = success_response()
+    # FIX: Update return_value to include 'torrent-added' structure
+    mock_network.return_value = success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
     c = Client()
 
     # Empty bytes

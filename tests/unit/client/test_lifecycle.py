@@ -249,6 +249,7 @@ def test_session_close_and_context_manager() -> None:
         # Mock request for session_close
         mock_instance.request.return_value = mock.Mock(
             status=200,
+            headers={},  # FIX: Added headers to satisfy Client response validation
             data=json.dumps({"result": "success", "arguments": {}}).encode(),
         )
 

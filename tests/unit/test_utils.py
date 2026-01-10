@@ -99,6 +99,8 @@ def test_ensure_location_str_error_via_move_torrent(mock_network: Any) -> None:
     """
     Verify `ensure_location_str` raises ValueError for relative paths via `Client.move_torrent_data`.
     """
+    # FIX: Setup mock before Client init
+    mock_network.return_value = success_response()
     c = Client()
     p = pathlib.Path("relative/path")
     with pytest.raises(ValueError, match="using relative"):
@@ -110,7 +112,8 @@ def test_list_or_none_via_add_torrent(mock_network: Any) -> None:
     Verify `list_or_none` logic via `Client.add_torrent`.
     Arguments like 'files_wanted' are processed by list_or_none.
     """
-    mock_network.return_value = success_response()
+    # FIX: Return valid torrent-added data
+    mock_network.return_value = success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
     c = Client()
 
     # 1. Single int -> [int]
@@ -133,7 +136,8 @@ def test_try_read_torrent_urls_via_add_torrent(mock_network: Any) -> None:
     """
     Verify `_try_read_torrent` logic via `Client.add_torrent` for URLs.
     """
-    mock_network.return_value = success_response()
+    # FIX: Return valid torrent-added data
+    mock_network.return_value = success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
     c = Client()
 
     # HTTP URL -> Passed as filename (internal logic returns None, so client sends as filename)
@@ -155,7 +159,8 @@ def test_try_read_torrent_file_content_via_add_torrent(mock_network: Any) -> Non
     """
     Verify `_try_read_torrent` logic via `Client.add_torrent` for file content (base64 encoding).
     """
-    mock_network.return_value = success_response()
+    # FIX: Return valid torrent-added data
+    mock_network.return_value = success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
     c = Client()
 
     # Bytes -> encoded to metainfo
