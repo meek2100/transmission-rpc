@@ -17,10 +17,16 @@ from transmission_rpc.error import TransmissionError
 
 def success_response(arguments: dict[str, Any] | None = None) -> mock.Mock:
     """Helper to create a standard success response mock."""
+    args = arguments or {}
+    # Inject default version info required for Client init
+    args.setdefault("rpc-version", 17)
+    args.setdefault("version", "4.0.0")
+    args.setdefault("rpc-version-semver", "5.0.0")
+
     return mock.Mock(
         status=200,
-        headers={},
-        data=json.dumps({"result": "success", "arguments": arguments or {}}).encode(),
+        headers={"x-transmission-session-id": "0"},
+        data=json.dumps({"result": "success", "arguments": args}).encode(),
     )
 
 
@@ -75,8 +81,10 @@ def test_change_torrent_warnings_v1_protocol(mock_network: Any) -> None:
     mock_network.side_effect = [
         mock.Mock(
             status=200,
-            headers={},
-            data=json.dumps({"result": "success", "arguments": {"rpc-version": 1, "version": "1.0"}}).encode(),
+            headers={"x-transmission-session-id": "0"},
+            data=json.dumps(
+                {"result": "success", "arguments": {"rpc-version": 1, "version": "1.0", "rpc-version-semver": "1.0.0"}}
+            ).encode(),
         ),
         success_response(),
         success_response(),
@@ -107,8 +115,10 @@ def test_set_session_warnings_full(mock_network: Any) -> None:
     mock_network.side_effect = [
         mock.Mock(
             status=200,
-            headers={},
-            data=json.dumps({"result": "success", "arguments": {"rpc-version": 1, "version": "1.0"}}).encode(),
+            headers={"x-transmission-session-id": "0"},
+            data=json.dumps(
+                {"result": "success", "arguments": {"rpc-version": 1, "version": "1.0", "rpc-version-semver": "1.0.0"}}
+            ).encode(),
         ),
         success_response(),
         success_response(),
@@ -138,8 +148,10 @@ def test_set_group_warning(mock_network: Any) -> None:
     mock_network.side_effect = [
         mock.Mock(
             status=200,
-            headers={},
-            data=json.dumps({"result": "success", "arguments": {"rpc-version": 1, "version": "1.0"}}).encode(),
+            headers={"x-transmission-session-id": "0"},
+            data=json.dumps(
+                {"result": "success", "arguments": {"rpc-version": 1, "version": "1.0", "rpc-version-semver": "1.0.0"}}
+            ).encode(),
         ),
         success_response(),
     ]
@@ -165,8 +177,10 @@ def test_change_torrent_version_warnings(mock_network: Any) -> None:
     mock_network.side_effect = [
         mock.Mock(
             status=200,
-            headers={},
-            data=json.dumps({"result": "success", "arguments": {"rpc-version": 1, "version": "1.0"}}).encode(),
+            headers={"x-transmission-session-id": "0"},
+            data=json.dumps(
+                {"result": "success", "arguments": {"rpc-version": 1, "version": "1.0", "rpc-version-semver": "1.0.0"}}
+            ).encode(),
         ),
         success_response(),
         success_response(),

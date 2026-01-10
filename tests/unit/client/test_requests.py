@@ -17,6 +17,15 @@ from transmission_rpc.error import (
 )
 
 
+def _init_args() -> dict:
+    """Return standard version arguments required for Client initialization."""
+    return {
+        "rpc-version": 17,
+        "version": "4.0.0",
+        "rpc-version-semver": "5.0.0",
+    }
+
+
 def test_http_query_connection_error() -> None:
     """Verify that connection errors from urllib3 are raised as TransmissionConnectError."""
     with mock.patch("urllib3.HTTPConnectionPool.request") as mock_req:
@@ -57,12 +66,12 @@ def test_http_query_too_many_requests() -> None:
 def test_request_invalid_json() -> None:
     """Verify that invalid JSON in the response raises a TransmissionError and logs the exception."""
     with mock.patch("urllib3.HTTPConnectionPool.request") as mock_req:
-        # 1. Init success
+        # 1. Init success (must include version info)
         mock_req.side_effect = [
             mock.Mock(
                 status=200,
                 headers={},
-                data=json.dumps({"result": "success", "arguments": {"rpc-version": 17}}).encode(),
+                data=json.dumps({"result": "success", "arguments": _init_args()}).encode(),
             ),
             # 2. Invalid JSON for get_torrents
             mock.Mock(status=200, headers={}, data=b"invalid json"),
@@ -86,7 +95,7 @@ def test_request_failure_result() -> None:
             mock.Mock(
                 status=200,
                 headers={},
-                data=json.dumps({"result": "success", "arguments": {"rpc-version": 17}}).encode(),
+                data=json.dumps({"result": "success", "arguments": _init_args()}).encode(),
             ),
             # 2. Failure response
             mock.Mock(status=200, headers={}, data=json.dumps({"result": "failure", "arguments": {}}).encode()),
@@ -104,7 +113,7 @@ def test_request_missing_result() -> None:
             mock.Mock(
                 status=200,
                 headers={},
-                data=json.dumps({"result": "success", "arguments": {"rpc-version": 17}}).encode(),
+                data=json.dumps({"result": "success", "arguments": _init_args()}).encode(),
             ),
             mock.Mock(status=200, headers={}, data=json.dumps({"arguments": {}}).encode()),
         ]

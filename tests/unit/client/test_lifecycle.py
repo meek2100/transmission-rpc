@@ -25,6 +25,15 @@ from transmission_rpc.constants import LOGGER, get_torrent_arguments
 from transmission_rpc.error import TransmissionAuthError
 
 
+def _init_args() -> dict[str, Any]:
+    """Return standard version arguments required for Client initialization."""
+    return {
+        "rpc-version": 17,
+        "version": "4.0.0",
+        "rpc-version-semver": "5.0.0",
+    }
+
+
 @pytest.mark.parametrize(
     ("url", "kwargs"),
     [
@@ -137,7 +146,8 @@ def test_deprecated_properties(client: Client) -> None:
     with pytest.warns(DeprecationWarning, match="do not use"):
         assert isinstance(client.raw_session, dict)
     with pytest.warns(DeprecationWarning, match="do not use"):
-        assert client.session_id == "0"
+        # Expect session_id from the fixture (mock_http_client in conftest)
+        assert client.session_id == "session_id"
     with pytest.warns(DeprecationWarning, match="do not use"):
         assert client.server_version is not None
     with pytest.warns(DeprecationWarning, match="use .get_session"):
@@ -156,7 +166,7 @@ def test_client_init_no_auth() -> None:
         mock_pool.return_value.request.return_value = mock.Mock(
             status=200,
             headers={"x-transmission-session-id": "0"},
-            data=json.dumps({"result": "success", "arguments": {}}).encode(),
+            data=json.dumps({"result": "success", "arguments": _init_args()}).encode(),
         )
         Client(username=None, password=None)
 
@@ -338,9 +348,7 @@ def test_context_manager_mocked() -> None:
         m.return_value.request.return_value = mock.Mock(
             status=200,
             headers={"x-transmission-session-id": "0"},
-            data=json.dumps(
-                {"result": "success", "arguments": {"rpc-version": 17, "version": "4.0", "rpc-version-semver": "5.0"}}
-            ).encode(),
+            data=json.dumps({"result": "success", "arguments": _init_args()}).encode(),
         )
         with Client():
             pass
