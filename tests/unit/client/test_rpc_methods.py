@@ -1,3 +1,4 @@
+import base64
 import contextlib
 import io
 import json
@@ -336,12 +337,12 @@ def test_misc_rpc_method_edge_cases(mock_network: Any) -> None:
     assert sent_json["method"] == "torrent-start-now"
 
     # free_space success
-    mock_network.return_value = success_response({"path": "/tmp", "size-bytes": 100})  # noqa: S108
-    assert c.free_space("/tmp") == 100  # noqa: S108
+    mock_network.return_value = success_response({"path": "/test/path", "size-bytes": 100})
+    assert c.free_space("/test/path") == 100
 
     # free_space fail
     mock_network.return_value = success_response({"path": "/other", "size-bytes": 0})
-    assert c.free_space("/tmp") is None  # noqa: S108
+    assert c.free_space("/test/path") is None
 
 
 def test_add_torrent_types(mock_network: Any) -> None:
@@ -355,8 +356,10 @@ def test_add_torrent_types(mock_network: Any) -> None:
     c = Client()
 
     # bytes
-    c.add_torrent(b"torrent content")
-    assert "metainfo" in mock_network.call_args[1]["json"]["arguments"]
+    content = b"torrent content"
+    encoded = base64.b64encode(content).decode()
+    c.add_torrent(content)
+    assert mock_network.call_args[1]["json"]["arguments"]["metainfo"] == encoded
 
     # file-like
     f = io.BytesIO(b"torrent content")
