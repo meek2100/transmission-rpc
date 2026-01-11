@@ -1,7 +1,3 @@
-"""
-Tests for Torrent class, status handling, and property calculations.
-"""
-
 import calendar
 import contextlib
 import datetime

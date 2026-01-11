@@ -1,8 +1,3 @@
-"""
-Tests for parsing torrent IDs via the Client API.
-Refactored to avoid importing private functions from the client module.
-"""
-
 import json
 from typing import Any
 from unittest import mock

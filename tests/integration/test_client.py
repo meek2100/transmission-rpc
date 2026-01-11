@@ -1,7 +1,3 @@
-"""
-Integration tests against a running Transmission daemon.
-"""
-
 import contextlib
 import time
 from collections.abc import Callable
@@ -49,11 +45,11 @@ def test_add_torrent_http(tr_client: Client) -> None:
     assert len(tr_client.get_torrents()) == 1, "Transmission daemon should have exactly 1 task after adding HTTP URL"
 
 
-def test_stop(tr_client: Client, fake_hash_factory: Callable[[], str]) -> None:
+def test_stop(tr_client: Client, generate_random_hash: Callable[[], str]) -> None:
     """
     Integration test: Verify stopping a torrent works.
     """
-    info_hash = fake_hash_factory()
+    info_hash = generate_random_hash()
     url = hash_to_magnet(info_hash)
     tr_client.add_torrent(url)
     tr_client.stop_torrent(info_hash)

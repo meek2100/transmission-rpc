@@ -1,7 +1,3 @@
-"""
-Tests for Session and SessionStats classes, verifying property mapping and deprecations.
-"""
-
 import contextlib
 from typing import Any
 

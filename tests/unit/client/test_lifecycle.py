@@ -1,13 +1,10 @@
-"""
-Tests for Client lifecycle: initialization, URL parsing, properties, and context managers.
-"""
-
 from __future__ import annotations
 
 import importlib
 import json
 import pathlib
 import socket
+import urllib.parse
 from typing import Any, Literal
 from unittest import mock
 from urllib.parse import urljoin
@@ -212,13 +209,14 @@ def test_context_manager_error(client: Client) -> None:
         raise ValueError("test")
 
 
-def test_http_unix_init() -> None:
+def test_http_unix_init(tmp_path: pathlib.Path) -> None:
     """Cover initialization of http+unix protocol to ensure correct URL construction."""
+    socket_path = str(tmp_path / "test")
     with (
         mock.patch("transmission_rpc.client.UnixHTTPConnectionPool"),
         mock.patch.object(Client, "get_session", autospec=True),
     ):
-        c = Client(protocol="http+unix", host="/tmp/test", path="/transmission/")  # noqa: S108
+        c = Client(protocol="http+unix", host=socket_path, path="/transmission/")
         # Use public property (deprecated) to verify URL construction
         with pytest.warns(DeprecationWarning, match="do not use"):
             assert c.url == "http+unix://localhost:9091/transmission/rpc"
@@ -296,33 +294,38 @@ def test_from_url_https() -> None:
             assert ":443" in c.url
 
 
-def test_from_url_http_unix() -> None:
+def test_from_url_http_unix(tmp_path: pathlib.Path) -> None:
     """Verify `from_url` correctly parses http+unix URLs."""
+    socket_path = tmp_path / "test"
+    encoded_path = urllib.parse.quote(str(socket_path), safe="")
+    url = f"http+unix://{encoded_path}"
     with (
         mock.patch("transmission_rpc.client.UnixHTTPConnectionPool"),
         mock.patch.object(Client, "get_session", autospec=True),
     ):
-        c = from_url("http+unix://%2Ftmp%2Ftest")
+        c = from_url(url)
         with pytest.warns(DeprecationWarning, match="do not use"):
             assert "http+unix://localhost" in c.url
 
 
-def test_unix_http_connection() -> None:
+def test_unix_http_connection(tmp_path: pathlib.Path) -> None:
     """Verify `UnixHTTPConnection` connects to the correct socket path."""
-    conn = UnixHTTPConnection("/tmp/sock")  # noqa: S108
+    socket_path = str(tmp_path / "sock")
+    conn = UnixHTTPConnection(socket_path)
     with (
         mock.patch("socket.socket") as mock_socket_cls,
         mock.patch.object(socket, "AF_UNIX", create=True, new=1),
     ):
         mock_sock = mock_socket_cls.return_value
         conn.connect()
-        mock_sock.connect.assert_called_with("/tmp/sock")  # noqa: S108
+        mock_sock.connect.assert_called_with(socket_path)
 
 
-def test_unix_http_connection_options() -> None:
+def test_unix_http_connection_options(tmp_path: pathlib.Path) -> None:
     """Verify `UnixHTTPConnection` respects socket options and timeouts."""
+    socket_path = str(tmp_path / "sock")
     conn = UnixHTTPConnection(
-        "/tmp/sock",  # noqa: S108
+        socket_path,
         socket_options=[(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)],
         timeout=10,
     )
@@ -334,13 +337,16 @@ def test_unix_http_connection_options() -> None:
         conn.connect()
         mock_sock.setsockopt.assert_called_with(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
         mock_sock.settimeout.assert_called_with(10)
-        mock_sock.connect.assert_called_with("/tmp/sock")  # noqa: S108
+        mock_sock.connect.assert_called_with(socket_path)
 
 
-def test_unix_http_connection_pool_str() -> None:
+def test_unix_http_connection_pool_str(tmp_path: pathlib.Path) -> None:
     """Verify `UnixHTTPConnectionPool` string representation."""
-    pool = UnixHTTPConnectionPool(host="/tmp/sock")  # noqa: S108
-    assert str(pool) == "UnixHTTPConnectionPool(host=/tmp/sock)"
+    socket_path = str(tmp_path / "sock")
+    pool = UnixHTTPConnectionPool(host=socket_path)
+    # Compare lowercased versions to handle Windows path case-insensitivity
+    # and urllib3's host normalization.
+    assert str(pool).lower() == f"UnixHTTPConnectionPool(host={socket_path})".lower()
 
 
 def test_context_manager_mocked() -> None:

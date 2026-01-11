@@ -1,7 +1,3 @@
-"""
-Tests for Client RPC methods (start, stop, add, etc.) and version compatibility.
-"""
-
 import contextlib
 import io
 import json
@@ -75,6 +71,35 @@ def test_get_torrent_with_args(mock_network: Any) -> None:
         c.get_torrent(1, arguments=["id", "name"])
 
 
+def test_get_torrent_return_found(mock_network: Any) -> None:
+    """
+    Verify logic to find and return the specific torrent in get_torrent.
+    """
+    mock_network.side_effect = [
+        success_response(),
+        success_response({"torrents": [{"id": 1, "hashString": "hash1", "name": "found"}]}),
+    ]
+    c = Client()
+    t = c.get_torrent(1)
+    assert t.id == 1
+    assert t.name == "found"
+
+
+def test_get_torrents_with_arguments(mock_network: Any) -> None:
+    """
+    Verify argument set logic in get_torrents.
+    """
+    mock_network.side_effect = [success_response(), success_response({"torrents": []})]
+    c = Client()
+    # Passing arguments triggers the 'if arguments:' block
+    c.get_torrents(arguments=["name", "id"])
+
+    # Verify we sent the combined set of arguments
+    sent_args = mock_network.call_args[1]["json"]["arguments"]["fields"]
+    assert "name" in sent_args
+    assert "hashString" in sent_args  # Added by the logic
+
+
 def test_change_torrent_warnings_v1_protocol(mock_network: Any) -> None:
     """Verify warnings are issued when using `change_torrent` features not supported by the current server version."""
     # Mock init to return version 1
@@ -139,6 +164,19 @@ def test_set_session_warnings_full(mock_network: Any) -> None:
         mock_warn.assert_called()
     with mock.patch.object(c.logger, "warning") as mock_warn:
         c.set_session(script_torrent_added_filename="f")
+        mock_warn.assert_called()
+
+
+def test_set_session_default_trackers(mock_network: Any) -> None:
+    """
+    Verify warning trigger for default_trackers.
+    """
+    # FIX: Return rpc-version 16 so that default_trackers (req 17) triggers warning
+    mock_network.return_value = success_response({"rpc-version": 16, "version": "3.00", "rpc-version-semver": "3.0.0"})
+    c = Client()
+
+    with mock.patch.object(c.logger, "warning") as mock_warn:
+        c.set_session(default_trackers=["http://tracker.com"])
         mock_warn.assert_called()
 
 
@@ -229,6 +267,16 @@ def test_groups_coverage(mock_network: Any) -> None:
     # Test get_groups with list
     c.get_groups(["test_g"])
     assert mock_network.call_args[1]["json"]["arguments"]["group"] == ["test_g"]
+
+
+def test_get_group_empty(mock_network: Any) -> None:
+    """Verify get_group returns None when result list is empty."""
+    mock_network.side_effect = [
+        success_response(),
+        success_response({"group": []}),
+    ]
+    c = Client()
+    assert c.get_group("missing") is None
 
 
 def test_rpc_command_methods(mock_network: Any) -> None:
@@ -351,11 +399,22 @@ def test_add_torrent_duplicate(mock_network: Any) -> None:
 
 
 def test_add_torrent_invalid_response(mock_network: Any) -> None:
-    """Verify that `add_torrent` raises TransmissionError if response is invalid."""
+    """Verify that `add_torrent` raises TransmissionError if response is invalid (empty/malformed)."""
     mock_network.side_effect = [success_response(), success_response({})]
     c = Client()
     with pytest.raises(TransmissionError, match="Invalid torrent-add response"):
         c.add_torrent("magnet:?xt=urn:btih:hash")
+
+
+def test_add_torrent_unexpected_data(mock_network: Any) -> None:
+    """Verify add_torrent raises TransmissionError if response contains unexpected data."""
+    mock_network.side_effect = [
+        success_response(),
+        success_response({"unexpected": "data"}),
+    ]
+    c = Client()
+    with pytest.raises(TransmissionError, match="Invalid torrent-add response"):
+        c.add_torrent("magnet:?")
 
 
 def test_get_torrent_not_found(mock_network: Any) -> None:
@@ -386,6 +445,27 @@ def test_session_stats_legacy(mock_network: Any) -> None:
     ]
     c = Client()
     assert c.session_stats().active_torrent_count == 5
+
+
+def test_session_stats_modern(mock_network: Any) -> None:
+    """Verify session_stats works when response is flat (modern)."""
+    mock_network.side_effect = [
+        success_response(),
+        success_response(
+            {
+                "activeTorrentCount": 5,
+                "downloadSpeed": 1000,
+                "pausedTorrentCount": 0,
+                "torrentCount": 5,
+                "uploadSpeed": 1000,
+                "cumulative-stats": {},
+                "current-stats": {},
+            }
+        ),
+    ]
+    c = Client()
+    stats = c.session_stats()
+    assert stats.active_torrent_count == 5
 
 
 def test_parsing_ids_public_api(mock_network: Any) -> None:
@@ -458,3 +538,41 @@ def test_get_recently_active_torrents(mock_network: Any) -> None:
     c = Client()
     _, removed = c.get_recently_active_torrents()
     assert removed == [1, 2]
+
+
+def test_get_recently_active_with_arguments(mock_network: Any) -> None:
+    """
+    Verify argument set logic in get_recently_active_torrents.
+    """
+    mock_network.side_effect = [success_response(), success_response({"torrents": [], "removed": []})]
+    c = Client()
+    # Passing arguments triggers the 'if arguments:' block
+    c.get_recently_active_torrents(arguments=["name"])
+
+    sent_args = mock_network.call_args[1]["json"]["arguments"]["fields"]
+    assert "name" in sent_args
+    assert "hashString" in sent_args
+
+
+def test_add_torrent_labels_single_string(mock_network: Any) -> None:
+    """Verify add_torrent handles a single string for labels."""
+    mock_network.return_value = success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
+    c = Client()
+    c.add_torrent("magnet:?", labels="one_label")
+
+    args = mock_network.call_args[1]["json"]["arguments"]
+    assert args["labels"] == ["one_label"]
+
+
+def test_add_torrent_filename_string(mock_network: Any, tmp_path: pathlib.Path) -> None:
+    """Verify add_torrent with a filename string (not URL)."""
+    mock_network.return_value = success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
+    c = Client()
+    # Pass a string that looks like a filename, not a URL
+    filename = str(tmp_path / "test.torrent")
+    c.add_torrent(filename)
+
+    args = mock_network.call_args[1]["json"]["arguments"]
+    # It should be treated as a filename, not metainfo
+    assert args["filename"] == filename
+    assert "metainfo" not in args

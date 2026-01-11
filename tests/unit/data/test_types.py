@@ -1,7 +1,3 @@
-"""
-Tests for data types: Group, Container, BitMap, etc.
-"""
-
 import contextlib
 from typing import Any
 from unittest import mock

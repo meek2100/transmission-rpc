@@ -1,8 +1,3 @@
-"""
-Tests for utility functions and helper logic.
-Refactored to test client helpers via the public Client API to avoid private imports.
-"""
-
 from __future__ import annotations
 
 import base64
@@ -76,7 +71,7 @@ def test_remove_unset_value_via_set_session(mock_network: Any) -> None:
     assert "speed-limit-down-enabled" not in sent_args
 
 
-def test_ensure_location_str_via_move_torrent(mock_network: Any) -> None:
+def test_ensure_location_str_via_move_torrent(mock_network: Any, tmp_path: pathlib.Path) -> None:
     """
     Verify `ensure_location_str` logic via `Client.move_torrent_data`.
     """
@@ -84,7 +79,7 @@ def test_ensure_location_str_via_move_torrent(mock_network: Any) -> None:
     c = Client()
 
     # Test Path object - Force absolute to pass validation on all OSs
-    p = pathlib.Path("/tmp/path").absolute()  # noqa: S108
+    p = (tmp_path / "path").absolute()
     c.move_torrent_data(ids=1, location=p)
     sent_args = mock_network.call_args[1]["json"]["arguments"]
     assert sent_args["location"] == str(p)

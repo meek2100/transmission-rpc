@@ -1,7 +1,3 @@
-"""
-Tests for client request handling, errors, and response parsing.
-"""
-
 import json
 from unittest import mock
 
