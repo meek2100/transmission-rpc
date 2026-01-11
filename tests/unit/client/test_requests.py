@@ -135,7 +135,7 @@ def test_void_methods_return_none_on_success(mock_network: Any, success_response
 
 
 def test_blocklist_update(mock_network: Any, success_response: Any) -> None:
-    """Verify blocklist_update returns size."""
+    """Verify that blocklist_update calls the correct RPC method and returns the blocklist size integer."""
     mock_network.side_effect = [success_response(), success_response({"blocklist-size": 123})]
     c = Client()
     assert c.blocklist_update() == 123

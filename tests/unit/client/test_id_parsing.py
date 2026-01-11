@@ -64,8 +64,7 @@ def test_parse_torrent_ids_value_error(mock_network: Any, success_response: Any,
 
 def test_parsing_ids_public_api(mock_network: Any, success_response: Any) -> None:
     """
-    Test ID parsing via public API to avoid calling _parse_torrent_ids directly
-    and ensure validation logic is reachable.
+    Verify validation logic for invalid IDs (length, content, type) when accessed through public methods like get_torrent.
     """
     mock_network.return_value = success_response()
     c = Client()

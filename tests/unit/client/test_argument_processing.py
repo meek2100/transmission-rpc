@@ -10,7 +10,7 @@ from transmission_rpc.client import Client
 from transmission_rpc.error import TransmissionError
 
 
-def test_remove_unset_value_via_set_session(mock_network: Any, success_response: Any) -> None:
+def test_set_session_filters_none_values(mock_network: Any, success_response: Any) -> None:
     """
     Verify that None values in kwargs are removed from the payload sent to the server.
 
@@ -29,7 +29,7 @@ def test_remove_unset_value_via_set_session(mock_network: Any, success_response:
     assert "speed-limit-down-enabled" not in sent_args
 
 
-def test_ensure_location_str_via_move_torrent(mock_network: Any, tmp_path: pathlib.Path, success_response: Any) -> None:
+def test_move_torrent_converts_path_to_str(mock_network: Any, tmp_path: pathlib.Path, success_response: Any) -> None:
     """
     Verify `ensure_location_str` logic via `Client.move_torrent_data`.
     """
@@ -48,7 +48,7 @@ def test_ensure_location_str_via_move_torrent(mock_network: Any, tmp_path: pathl
     assert sent_args["location"] == "/str/path"
 
 
-def test_ensure_location_str_error_via_move_torrent(mock_network: Any, success_response: Any) -> None:
+def test_move_torrent_raises_on_relative_path(mock_network: Any, success_response: Any) -> None:
     """
     Verify `ensure_location_str` raises ValueError for relative paths via `Client.move_torrent_data`.
     """
@@ -60,7 +60,7 @@ def test_ensure_location_str_error_via_move_torrent(mock_network: Any, success_r
         c.move_torrent_data(ids=1, location=p)
 
 
-def test_list_or_none_via_add_torrent(mock_network: Any, success_response: Any) -> None:
+def test_add_torrent_handles_list_or_none(mock_network: Any, success_response: Any) -> None:
     """
     Verify `list_or_none` logic via `Client.add_torrent`.
     Arguments like 'files_wanted' are processed by list_or_none.
@@ -84,7 +84,7 @@ def test_list_or_none_via_add_torrent(mock_network: Any, success_response: Any) 
     assert "files-wanted" not in args
 
 
-def test_try_read_torrent_urls_via_add_torrent(mock_network: Any, success_response: Any) -> None:
+def test_add_torrent_treats_urls_as_filenames(mock_network: Any, success_response: Any) -> None:
     """
     Verify `_try_read_torrent` logic via `Client.add_torrent` for URLs.
     """
