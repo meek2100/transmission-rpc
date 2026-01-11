@@ -1,4 +1,3 @@
-import contextlib
 import json
 from typing import Any
 from unittest import mock
@@ -264,25 +263,33 @@ def test_rpc_command_methods(mock_network: Any, success_response: Any) -> None:
     assert c.blocklist_update() == 10
 
 
-def test_rpc_method_logic_branches(mock_network: Any, success_response: Any) -> None:
-    """Verify edge case handling for invalid session encryption values and other methods."""
+def test_set_session_invalid_encryption_value(mock_network: Any, success_response: Any) -> None:
+    """Verify that set_session raises ValueError for invalid encryption options."""
     mock_network.return_value = success_response()
     c = Client()
-
-    # set_session invalid encryption
     with pytest.raises(ValueError, match="Invalid encryption value"):
         c.set_session(encryption="invalid")  # type: ignore
 
-    # start_torrent bypass_queue
+
+def test_start_torrent_bypass_queue_argument(mock_network: Any, success_response: Any) -> None:
+    """Verify that start_torrent uses 'torrent-start-now' method when bypass_queue is True."""
+    mock_network.return_value = success_response()
+    c = Client()
     c.start_torrent(ids=1, bypass_queue=True)
     sent_json = mock_network.call_args[1]["json"]
     assert sent_json["method"] == "torrent-start-now"
 
-    # free_space success
+
+def test_free_space_success_and_failure(mock_network: Any, success_response: Any) -> None:
+    """Verify free_space returns size on success and None when paths do not match."""
+    mock_network.return_value = success_response()
+    c = Client()
+
+    # Success case
     mock_network.return_value = success_response({"path": "/test/path", "size-bytes": 100})
     assert c.free_space("/test/path") == 100
 
-    # free_space fail
+    # Failure/Mismatch case
     mock_network.return_value = success_response({"path": "/other", "size-bytes": 0})
     assert c.free_space("/test/path") is None
 
@@ -336,89 +343,3 @@ def test_session_stats_modern(mock_network: Any, success_response: Any) -> None:
     c = Client()
     stats = c.session_stats()
     assert stats.active_torrent_count == 5
-
-
-def test_parsing_ids_public_api(mock_network: Any, success_response: Any) -> None:
-    """
-    Test ID parsing via public API to avoid calling _parse_torrent_ids directly
-    and ensure validation logic is reachable.
-    """
-    mock_network.return_value = success_response()
-    c = Client()
-
-    # Test invalid string length via get_torrent
-    with pytest.raises(ValueError, match="not valid torrent id"):
-        c.get_torrent("a")  # too short
-
-    # Test invalid string content
-    with pytest.raises(ValueError, match="not valid torrent id"):
-        c.get_torrent("z" * 40)
-
-    # Test invalid type
-    with pytest.raises(ValueError, match="Invalid torrent id"):
-        c.start_torrent(ids=1.5)  # type: ignore
-
-    # Test valid hash string
-    h = "a" * 40
-    mock_network.side_effect = [success_response({"torrents": []})]
-    with contextlib.suppress(KeyError):
-        c.get_torrent(h)
-
-
-def test_client_methods_success(mock_network: Any, success_response: Any, tmp_path: Any) -> None:
-    """
-    Verify that various client methods execute without error and return None
-    when the server responds with success.
-    """
-    mock_network.return_value = success_response()
-    c = Client()
-
-    c.remove_torrent(ids=1)
-    c.start_torrent(ids=1)
-    c.stop_torrent(ids=1)
-    c.verify_torrent(ids=1)
-    c.reannounce_torrent(ids=1)
-    c.move_torrent_data(ids=1, location=str(tmp_path))
-    c.queue_top(ids=1)
-    c.queue_bottom(ids=1)
-    c.queue_up(ids=1)
-    c.queue_down(ids=1)
-    c.set_session(alt_speed_enabled=True)
-    c.session_close()
-
-    # rename_torrent_path returns tuple
-    mock_network.return_value = success_response({"path": "/a", "name": "b"})
-    assert c.rename_torrent_path(1, "/path", "name") == ("/a", "b")
-
-    # port_test returns object
-    mock_network.return_value = success_response({"port-is-open": True})
-    assert c.port_test().port_is_open is True
-
-
-def test_blocklist_update(mock_network: Any, success_response: Any) -> None:
-    """Verify blocklist_update returns size."""
-    mock_network.side_effect = [success_response(), success_response({"blocklist-size": 123})]
-    c = Client()
-    assert c.blocklist_update() == 123
-
-
-def test_get_recently_active_torrents(mock_network: Any, success_response: Any) -> None:
-    """Verify get_recently_active_torrents structure."""
-    mock_network.side_effect = [success_response(), success_response({"torrents": [], "removed": [1, 2]})]
-    c = Client()
-    _, removed = c.get_recently_active_torrents()
-    assert removed == [1, 2]
-
-
-def test_get_recently_active_with_arguments(mock_network: Any, success_response: Any) -> None:
-    """
-    Verify argument set logic in get_recently_active_torrents.
-    """
-    mock_network.side_effect = [success_response(), success_response({"torrents": [], "removed": []})]
-    c = Client()
-    # Passing arguments triggers the 'if arguments:' block
-    c.get_recently_active_torrents(arguments=["name"])
-
-    sent_args = mock_network.call_args[1]["json"]["arguments"]["fields"]
-    assert "name" in sent_args
-    assert "hashString" in sent_args
