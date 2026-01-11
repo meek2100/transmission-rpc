@@ -1,4 +1,5 @@
 import json
+import pathlib
 from typing import Any
 from unittest import mock
 
@@ -101,3 +102,62 @@ def test_request_missing_result(success_response: Any) -> None:
             c.get_torrents()
 
         c.logger.debug.assert_called()
+
+
+def test_client_methods_success(mock_network: Any, success_response: Any, tmp_path: pathlib.Path) -> None:
+    """
+    Verify that various client methods execute without error and return None
+    when the server responds with success.
+    """
+    mock_network.return_value = success_response()
+    c = Client()
+
+    c.remove_torrent(ids=1)
+    c.start_torrent(ids=1)
+    c.stop_torrent(ids=1)
+    c.verify_torrent(ids=1)
+    c.reannounce_torrent(ids=1)
+    c.move_torrent_data(ids=1, location=str(tmp_path))
+    c.queue_top(ids=1)
+    c.queue_bottom(ids=1)
+    c.queue_up(ids=1)
+    c.queue_down(ids=1)
+    c.set_session(alt_speed_enabled=True)
+    c.session_close()
+
+    # rename_torrent_path returns tuple
+    mock_network.return_value = success_response({"path": "/a", "name": "b"})
+    assert c.rename_torrent_path(1, "/path", "name") == ("/a", "b")
+
+    # port_test returns object
+    mock_network.return_value = success_response({"port-is-open": True})
+    assert c.port_test().port_is_open is True
+
+
+def test_blocklist_update(mock_network: Any, success_response: Any) -> None:
+    """Verify blocklist_update returns size."""
+    mock_network.side_effect = [success_response(), success_response({"blocklist-size": 123})]
+    c = Client()
+    assert c.blocklist_update() == 123
+
+
+def test_get_recently_active_torrents(mock_network: Any, success_response: Any) -> None:
+    """Verify get_recently_active_torrents structure."""
+    mock_network.side_effect = [success_response(), success_response({"torrents": [], "removed": [1, 2]})]
+    c = Client()
+    _, removed = c.get_recently_active_torrents()
+    assert removed == [1, 2]
+
+
+def test_get_recently_active_with_arguments(mock_network: Any, success_response: Any) -> None:
+    """
+    Verify argument set logic in get_recently_active_torrents.
+    """
+    mock_network.side_effect = [success_response(), success_response({"torrents": [], "removed": []})]
+    c = Client()
+    # Passing arguments triggers the 'if arguments:' block
+    c.get_recently_active_torrents(arguments=["name"])
+
+    sent_args = mock_network.call_args[1]["json"]["arguments"]["fields"]
+    assert "name" in sent_args
+    assert "hashString" in sent_args

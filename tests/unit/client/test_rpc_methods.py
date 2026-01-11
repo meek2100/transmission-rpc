@@ -8,13 +8,6 @@ import pytest
 from transmission_rpc.client import Client
 
 
-@pytest.fixture
-def mock_network() -> Any:
-    """Fixture to patch urllib3 request."""
-    with mock.patch("urllib3.HTTPConnectionPool.request") as m:
-        yield m
-
-
 def test_start_all_bypass_queue(mock_network: Any, success_response: Any) -> None:
     """
     Verify that `start_all(bypass_queue=True)` correctly calls `torrent-start-now`
@@ -145,7 +138,7 @@ def test_set_session_default_trackers(mock_network: Any, success_response: Any) 
     """
     Verify warning trigger for default_trackers.
     """
-    # FIX: Return rpc-version 16 so that default_trackers (req 17) triggers warning
+    # Return rpc-version 16 so that default_trackers (req 17) triggers warning
     mock_network.return_value = success_response({"rpc-version": 16, "version": "3.00", "rpc-version-semver": "3.0.0"})
     c = Client()
 
@@ -249,7 +242,7 @@ def test_rpc_command_methods(mock_network: Any, success_response: Any) -> None:
     """Verify execution of client command methods."""
     mock_network.side_effect = [
         success_response(),  # init
-        # FIX: return a valid torrent for start_all to operate on
+        # return a valid torrent for start_all to operate on
         success_response({"torrents": [{"id": 1, "queuePosition": 0, "hashString": "h"}]}),  # start_all (get)
         success_response(),  # start_all (start)
         success_response(),  # stop
@@ -372,7 +365,7 @@ def test_parsing_ids_public_api(mock_network: Any, success_response: Any) -> Non
         c.get_torrent(h)
 
 
-def test_client_methods_success(mock_network: Any, success_response: Any) -> None:
+def test_client_methods_success(mock_network: Any, success_response: Any, tmp_path: Any) -> None:
     """
     Verify that various client methods execute without error and return None
     when the server responds with success.
@@ -385,7 +378,7 @@ def test_client_methods_success(mock_network: Any, success_response: Any) -> Non
     c.stop_torrent(ids=1)
     c.verify_torrent(ids=1)
     c.reannounce_torrent(ids=1)
-    c.move_torrent_data(ids=1, location="/tmp")  # noqa: S108
+    c.move_torrent_data(ids=1, location=str(tmp_path))
     c.queue_top(ids=1)
     c.queue_bottom(ids=1)
     c.queue_up(ids=1)

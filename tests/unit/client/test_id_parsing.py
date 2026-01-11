@@ -1,25 +1,18 @@
+import contextlib
 from typing import Any
-from unittest import mock
 
 import pytest
 
 from transmission_rpc.client import Client
 
 
-@pytest.fixture
-def mock_network(success_response: Any) -> Any:
-    """Fixture to patch urllib3 request."""
-    with mock.patch("urllib3.HTTPConnectionPool.request") as m:
-        m.return_value = success_response()
-        yield m
-
-
 @pytest.mark.parametrize("arg", [float(1), "non-hash-string"])
-def test_parse_id_raise(mock_network: Any, arg: Any) -> None:
+def test_parse_id_raise(mock_network: Any, success_response: Any, arg: Any) -> None:
     """
     Verify that invalid torrent IDs raise ValueError.
     We use start_torrent to trigger ID parsing validation.
     """
+    mock_network.return_value = success_response()
     c = Client()
     with pytest.raises(ValueError, match="torrent id"):
         c.start_torrent(ids=arg)
@@ -35,10 +28,11 @@ def test_parse_id_raise(mock_network: Any, arg: Any) -> None:
         (None, []),
     ],
 )
-def test_parse_torrent_ids_structure(mock_network: Any, arg: Any, expected_ids: Any) -> None:
+def test_parse_torrent_ids_structure(mock_network: Any, success_response: Any, arg: Any, expected_ids: Any) -> None:
     """
     Verify that passing various ID formats results in the correct 'ids' argument in the RPC call.
     """
+    mock_network.return_value = success_response()
     c = Client()
 
     # start_torrent(ids=None) raises ValueError "request require ids" because
@@ -58,10 +52,38 @@ def test_parse_torrent_ids_structure(mock_network: Any, arg: Any, expected_ids: 
 
 
 @pytest.mark.parametrize("arg", ["not-recently-active", "non-hash-string", -1, 1.1, "5:10", "5,6,8,9,10"])
-def test_parse_torrent_ids_value_error(mock_network: Any, arg: Any) -> None:
+def test_parse_torrent_ids_value_error(mock_network: Any, success_response: Any, arg: Any) -> None:
     """
     Verify that invalid ID inputs raise ValueError via the public API.
     """
+    mock_network.return_value = success_response()
     c = Client()
     with pytest.raises(ValueError, match="torrent id"):
         c.start_torrent(ids=arg)
+
+
+def test_parsing_ids_public_api(mock_network: Any, success_response: Any) -> None:
+    """
+    Test ID parsing via public API to avoid calling _parse_torrent_ids directly
+    and ensure validation logic is reachable.
+    """
+    mock_network.return_value = success_response()
+    c = Client()
+
+    # Test invalid string length via get_torrent
+    with pytest.raises(ValueError, match="not valid torrent id"):
+        c.get_torrent("a")  # too short
+
+    # Test invalid string content
+    with pytest.raises(ValueError, match="not valid torrent id"):
+        c.get_torrent("z" * 40)
+
+    # Test invalid type
+    with pytest.raises(ValueError, match="Invalid torrent id"):
+        c.start_torrent(ids=1.5)  # type: ignore
+
+    # Test valid hash string
+    h = "a" * 40
+    mock_network.side_effect = [success_response({"torrents": []})]
+    with contextlib.suppress(KeyError):
+        c.get_torrent(h)

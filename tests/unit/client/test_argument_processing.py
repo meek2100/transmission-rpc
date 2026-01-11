@@ -12,6 +12,8 @@ from transmission_rpc.error import TransmissionError
 
 def test_remove_unset_value_via_set_session(mock_network: Any, success_response: Any) -> None:
     """
+    Verify that None values in kwargs are removed from the payload sent to the server.
+
     Verify `remove_unset_value` logic via `Client.set_session`.
     Passing `None` for a keyword argument should exclude it from the RPC payload.
     """
@@ -50,7 +52,6 @@ def test_ensure_location_str_error_via_move_torrent(mock_network: Any, success_r
     """
     Verify `ensure_location_str` raises ValueError for relative paths via `Client.move_torrent_data`.
     """
-    # FIX: Setup mock before Client init
     mock_network.return_value = success_response()
     c = Client()
     # Force relative path
@@ -64,11 +65,10 @@ def test_list_or_none_via_add_torrent(mock_network: Any, success_response: Any) 
     Verify `list_or_none` logic via `Client.add_torrent`.
     Arguments like 'files_wanted' are processed by list_or_none.
     """
-    # FIX: Return valid torrent-added data
     mock_network.return_value = success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
     c = Client()
 
-    # 1. Single int -> [int] (FIX: Pass list because client.py expects list)
+    # 1. Single int -> [int]
     c.add_torrent("magnet:?", files_wanted=[1])
     args = mock_network.call_args[1]["json"]["arguments"]
     assert args["files-wanted"] == [1]
@@ -88,7 +88,6 @@ def test_try_read_torrent_urls_via_add_torrent(mock_network: Any, success_respon
     """
     Verify `_try_read_torrent` logic via `Client.add_torrent` for URLs.
     """
-    # FIX: Return valid torrent-added data
     mock_network.return_value = success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
     c = Client()
 
@@ -161,7 +160,6 @@ def test_add_torrent_types(mock_network: Any, success_response: Any) -> None:
 
 def test_add_torrent_empty_metadata_and_unknown_types(mock_network: Any, success_response: Any) -> None:
     """Verify `add_torrent` raises ValueError for empty metadata or unknown input types."""
-    # FIX: Update return_value to include 'torrent-added' structure
     mock_network.return_value = success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
     c = Client()
 
