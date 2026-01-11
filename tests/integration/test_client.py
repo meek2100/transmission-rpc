@@ -26,9 +26,9 @@ def test_add_magnet(tr_client: Client) -> None:
     assert len(tr_client.get_torrents()) == 1, "Transmission daemon should have exactly 1 task after adding magnet link"
 
 
-def test_add_torrent_fd(tr_client: Client) -> None:
+def test_add_torrent_file_object(tr_client: Client) -> None:
     """
-    Integration test: Verify adding a torrent via an open file descriptor.
+    Integration test: Verify adding a torrent via an open file object.
     """
     with open("tests/fixtures/iso.torrent", "rb") as f:
         tr_client.add_torrent(f)
