@@ -106,7 +106,7 @@ def test_try_read_torrent_urls_via_add_torrent(mock_network: Any, success_respon
     assert "metainfo" not in args
 
 
-def test_file_scheme_error(mock_network: Any, success_response: Any) -> None:
+def test_add_torrent_file_scheme_error(mock_network: Any, success_response: Any) -> None:
     """Verify that using the `file://` scheme in `add_torrent` raises a ValueError."""
     mock_network.return_value = success_response()
     c = Client()

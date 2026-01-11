@@ -4,7 +4,6 @@ import importlib
 import json
 import pathlib
 import socket
-import urllib.parse
 from typing import Any, Literal
 from unittest import mock
 from urllib.parse import urljoin
@@ -93,6 +92,18 @@ def test_from_url(url: str, kwargs: dict[str, Any]) -> None:
             timeout=DEFAULT_TIMEOUT,
             logger=LOGGER,
         )
+
+
+def test_from_url_invalid_scheme() -> None:
+    """Verify `from_url` raises ValueError for unknown URL schemes."""
+    with pytest.raises(ValueError, match="unknown url scheme"):
+        from_url("ftp://127.0.0.1")
+
+
+def test_from_url_http_unix_no_host() -> None:
+    """Verify `from_url` raises ValueError for http+unix URLs missing the socket path."""
+    with pytest.raises(ValueError, match=r"http\+unix URL is missing Unix socket path"):
+        from_url("http+unix://")
 
 
 def test_client_init_invalid_protocol() -> None:
@@ -196,7 +207,7 @@ def test_context_manager_error(client: Client) -> None:
         raise ValueError("test")
 
 
-def test_http_unix_init(tmp_path: pathlib.Path) -> None:
+def test_client_init_http_unix(tmp_path: pathlib.Path) -> None:
     """Cover initialization of http+unix protocol to ensure correct URL construction."""
     socket_path = str(tmp_path / "test")
     with (
@@ -219,7 +230,7 @@ def test_client_init_path_correction_and_https() -> None:
 
         # HTTPS
         with mock.patch("transmission_rpc.client.urllib3.HTTPSConnectionPool") as mock_https:
-            c = Client(protocol="https")
+            Client(protocol="https")
             mock_https.assert_called()
 
 
@@ -248,51 +259,6 @@ def test_session_close_and_context_manager() -> None:
             pass
         # Should close the pool
         mock_instance.close.assert_called()
-
-
-def test_from_url_invalid_scheme() -> None:
-    """Verify `from_url` raises ValueError for unknown URL schemes."""
-    with pytest.raises(ValueError, match="unknown url scheme"):
-        from_url("ftp://127.0.0.1")
-
-
-def test_from_url_http_unix_no_host() -> None:
-    """Verify `from_url` raises ValueError for http+unix URLs missing the socket path."""
-    with pytest.raises(ValueError, match=r"http\+unix URL is missing Unix socket path"):
-        from_url("http+unix://")
-
-
-def test_from_url_http() -> None:
-    """Verify `from_url` correctly parses standard HTTP URLs."""
-    with mock.patch.object(Client, "get_session", autospec=True):
-        c = from_url("http://127.0.0.1")
-        with pytest.warns(DeprecationWarning, match="do not use"):
-            assert ":80" in c.url
-
-
-def test_from_url_https() -> None:
-    """Verify `from_url` correctly parses HTTPS URLs."""
-    with (
-        mock.patch("transmission_rpc.client.urllib3.HTTPSConnectionPool"),
-        mock.patch.object(Client, "get_session", autospec=True),
-    ):
-        c = from_url("https://127.0.0.1")
-        with pytest.warns(DeprecationWarning, match="do not use"):
-            assert ":443" in c.url
-
-
-def test_from_url_http_unix(tmp_path: pathlib.Path) -> None:
-    """Verify `from_url` correctly parses http+unix URLs."""
-    socket_path = tmp_path / "test"
-    encoded_path = urllib.parse.quote(str(socket_path), safe="")
-    url = f"http+unix://{encoded_path}"
-    with (
-        mock.patch("transmission_rpc.client.UnixHTTPConnectionPool"),
-        mock.patch.object(Client, "get_session", autospec=True),
-    ):
-        c = from_url(url)
-        with pytest.warns(DeprecationWarning, match="do not use"):
-            assert "http+unix://localhost" in c.url
 
 
 def test_unix_http_connection(tmp_path: pathlib.Path) -> None:
@@ -327,7 +293,7 @@ def test_unix_http_connection_options(tmp_path: pathlib.Path) -> None:
         mock_sock.connect.assert_called_with(socket_path)
 
 
-def test_unix_http_connection_pool_str(tmp_path: pathlib.Path) -> None:
+def test_unix_http_connection_pool_repr(tmp_path: pathlib.Path) -> None:
     """Verify `UnixHTTPConnectionPool` string representation."""
     socket_path = str(tmp_path / "sock")
     pool = UnixHTTPConnectionPool(host=socket_path)
@@ -357,7 +323,7 @@ def test_unix_http_connection_pool_str(tmp_path: pathlib.Path) -> None:
         ),
     ],
 )
-def test_client_parse_url(
+def test_client_url_construction(
     protocol: Literal["http", "https"], username: str, password: str | None, host: str, port: int, path: str
 ) -> None:
     """
