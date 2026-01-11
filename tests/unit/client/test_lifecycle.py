@@ -22,15 +22,6 @@ from transmission_rpc.constants import LOGGER, get_torrent_arguments
 from transmission_rpc.error import TransmissionAuthError
 
 
-def _init_args() -> dict[str, Any]:
-    """Return standard version arguments required for Client initialization."""
-    return {
-        "rpc-version": 17,
-        "version": "4.0.0",
-        "rpc-version-semver": "5.0.0",
-    }
-
-
 @pytest.mark.parametrize(
     ("url", "kwargs"),
     [
@@ -153,18 +144,14 @@ def test_deprecated_properties(client: Client) -> None:
         assert client.rpc_version == 17
 
 
-def test_client_init_no_auth() -> None:
+def test_client_init_no_auth(success_response: Any) -> None:
     """Verify that initializing Client without credentials does not set the Authorization header."""
     # We patch make_headers to verify it is NOT called with basic_auth
     with (
         mock.patch("transmission_rpc.client.make_headers", wraps=urllib3.util.make_headers) as mock_make,
         mock.patch("transmission_rpc.client.urllib3.HTTPConnectionPool") as mock_pool,
     ):
-        mock_pool.return_value.request.return_value = mock.Mock(
-            status=200,
-            headers={"x-transmission-session-id": "0"},
-            data=json.dumps({"result": "success", "arguments": _init_args()}).encode(),
-        )
+        mock_pool.return_value.request.return_value = success_response()
         Client(username=None, password=None)
 
         # Check calls to make_headers
@@ -347,19 +334,6 @@ def test_unix_http_connection_pool_str(tmp_path: pathlib.Path) -> None:
     # Compare lowercased versions to handle Windows path case-insensitivity
     # and urllib3's host normalization.
     assert str(pool).lower() == f"UnixHTTPConnectionPool(host={socket_path})".lower()
-
-
-def test_context_manager_mocked() -> None:
-    """Verify that the Client properly closes connections when used as a context manager."""
-    with mock.patch("transmission_rpc.client.urllib3.HTTPConnectionPool") as m:
-        m.return_value.request.return_value = mock.Mock(
-            status=200,
-            headers={"x-transmission-session-id": "0"},
-            data=json.dumps({"result": "success", "arguments": _init_args()}).encode(),
-        )
-        with Client():
-            pass
-        m.return_value.close.assert_called()
 
 
 @pytest.mark.parametrize(

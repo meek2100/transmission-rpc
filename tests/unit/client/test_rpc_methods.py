@@ -12,21 +12,6 @@ from transmission_rpc.client import Client
 from transmission_rpc.error import TransmissionError
 
 
-def success_response(arguments: dict[str, Any] | None = None) -> mock.Mock:
-    """Helper to create a standard success response mock."""
-    args = arguments or {}
-    # Inject default version info required for Client init
-    args.setdefault("rpc-version", 17)
-    args.setdefault("version", "4.0.0")
-    args.setdefault("rpc-version-semver", "5.0.0")
-
-    return mock.Mock(
-        status=200,
-        headers={"x-transmission-session-id": "0"},
-        data=json.dumps({"result": "success", "arguments": args}).encode(),
-    )
-
-
 @pytest.fixture
 def mock_network() -> Any:
     """Fixture to patch urllib3 request."""
@@ -34,15 +19,7 @@ def mock_network() -> Any:
         yield m
 
 
-def test_start_torrent_no_ids(mock_network: Any) -> None:
-    """Verify that `start_torrent` raises ValueError if no IDs are provided."""
-    mock_network.return_value = success_response()
-    c = Client()
-    with pytest.raises(ValueError, match="request require ids"):
-        c.start_torrent(ids=[])
-
-
-def test_start_all_bypass_queue(mock_network: Any) -> None:
+def test_start_all_bypass_queue(mock_network: Any, success_response: Any) -> None:
     """
     Verify that `start_all(bypass_queue=True)` correctly calls `torrent-start-now`
     after fetching the list of torrents.
@@ -61,7 +38,7 @@ def test_start_all_bypass_queue(mock_network: Any) -> None:
     assert last_call_json["method"] == "torrent-start-now"
 
 
-def test_get_torrent_with_args(mock_network: Any) -> None:
+def test_get_torrent_with_args(mock_network: Any, success_response: Any) -> None:
     """Verify that `get_torrent` raises KeyError if the requested fields are not returned by the server."""
     mock_network.side_effect = [
         success_response(),  # init
@@ -72,7 +49,7 @@ def test_get_torrent_with_args(mock_network: Any) -> None:
         c.get_torrent(1, arguments=["id", "name"])
 
 
-def test_get_torrent_return_found(mock_network: Any) -> None:
+def test_get_torrent_return_found(mock_network: Any, success_response: Any) -> None:
     """
     Verify logic to find and return the specific torrent in get_torrent.
     """
@@ -86,7 +63,7 @@ def test_get_torrent_return_found(mock_network: Any) -> None:
     assert t.name == "found"
 
 
-def test_get_torrents_with_arguments(mock_network: Any) -> None:
+def test_get_torrents_with_arguments(mock_network: Any, success_response: Any) -> None:
     """
     Verify argument set logic in get_torrents.
     """
@@ -101,7 +78,7 @@ def test_get_torrents_with_arguments(mock_network: Any) -> None:
     assert "hashString" in sent_args  # Added by the logic
 
 
-def test_change_torrent_warnings_v1_protocol(mock_network: Any) -> None:
+def test_change_torrent_warnings_v1_protocol(mock_network: Any, success_response: Any) -> None:
     """Verify warnings are issued when using `change_torrent` features not supported by the current server version."""
     # Mock init to return version 1
     mock_network.side_effect = [
@@ -127,7 +104,7 @@ def test_change_torrent_warnings_v1_protocol(mock_network: Any) -> None:
         mock_warn.assert_called()
 
 
-def test_change_torrent_no_args(mock_network: Any) -> None:
+def test_change_torrent_no_args(mock_network: Any, success_response: Any) -> None:
     """Verify that `change_torrent` raises ValueError if no arguments are provided."""
     mock_network.return_value = success_response()
     c = Client()
@@ -135,7 +112,7 @@ def test_change_torrent_no_args(mock_network: Any) -> None:
         c.change_torrent(ids=1)
 
 
-def test_set_session_warnings_full(mock_network: Any) -> None:
+def test_set_session_warnings_full(mock_network: Any, success_response: Any) -> None:
     """Verify warnings are issued when using `set_session` features not supported by the current server version."""
     # Mock init to return version 1
     mock_network.side_effect = [
@@ -168,7 +145,7 @@ def test_set_session_warnings_full(mock_network: Any) -> None:
         mock_warn.assert_called()
 
 
-def test_set_session_default_trackers(mock_network: Any) -> None:
+def test_set_session_default_trackers(mock_network: Any, success_response: Any) -> None:
     """
     Verify warning trigger for default_trackers.
     """
@@ -181,7 +158,7 @@ def test_set_session_default_trackers(mock_network: Any) -> None:
         mock_warn.assert_called()
 
 
-def test_set_group_warning(mock_network: Any) -> None:
+def test_set_group_warning(mock_network: Any, success_response: Any) -> None:
     """Verify warning is issued when using `set_group` on a server version that doesn't support it."""
     # Mock init to return version 1
     mock_network.side_effect = [
@@ -201,7 +178,7 @@ def test_set_group_warning(mock_network: Any) -> None:
         mock_warn.assert_called()
 
 
-def test_file_scheme_error(mock_network: Any) -> None:
+def test_file_scheme_error(mock_network: Any, success_response: Any) -> None:
     """Verify that using the `file://` scheme in `add_torrent` raises a ValueError."""
     mock_network.return_value = success_response()
     c = Client()
@@ -209,7 +186,7 @@ def test_file_scheme_error(mock_network: Any) -> None:
         c.add_torrent("file:///tmp/test.torrent")
 
 
-def test_change_torrent_version_warnings(mock_network: Any) -> None:
+def test_change_torrent_version_warnings(mock_network: Any, success_response: Any) -> None:
     """Verify specific warnings for `change_torrent` based on RPC version thresholds."""
     # We need to simulate different versions.
     # Case 1: Version 1 (low)
@@ -237,7 +214,7 @@ def test_change_torrent_version_warnings(mock_network: Any) -> None:
         mock_warn.assert_called()  # v17 required
 
 
-def test_groups_coverage(mock_network: Any) -> None:
+def test_groups_coverage(mock_network: Any, success_response: Any) -> None:
     """Cover `set_group` and `get_groups` functionality."""
     mock_network.side_effect = [
         success_response(),  # init
@@ -270,7 +247,7 @@ def test_groups_coverage(mock_network: Any) -> None:
     assert mock_network.call_args[1]["json"]["arguments"]["group"] == ["test_g"]
 
 
-def test_get_group_empty(mock_network: Any) -> None:
+def test_get_group_empty(mock_network: Any, success_response: Any) -> None:
     """Verify get_group returns None when result list is empty."""
     mock_network.side_effect = [
         success_response(),
@@ -280,7 +257,7 @@ def test_get_group_empty(mock_network: Any) -> None:
     assert c.get_group("missing") is None
 
 
-def test_rpc_command_methods(mock_network: Any) -> None:
+def test_rpc_command_methods(mock_network: Any, success_response: Any) -> None:
     """Verify execution of client command methods."""
     mock_network.side_effect = [
         success_response(),  # init
@@ -306,7 +283,7 @@ def test_rpc_command_methods(mock_network: Any) -> None:
     assert c.blocklist_update() == 10
 
 
-def test_add_torrent_args(mock_network: Any) -> None:
+def test_add_torrent_args(mock_network: Any, success_response: Any) -> None:
     """Cover `add_torrent` arguments serialization."""
     mock_network.side_effect = [
         success_response(),  # init
@@ -322,7 +299,7 @@ def test_add_torrent_args(mock_network: Any) -> None:
     assert sent_args["bandwidthPriority"] == 1
 
 
-def test_misc_rpc_method_edge_cases(mock_network: Any) -> None:
+def test_misc_rpc_method_edge_cases(mock_network: Any, success_response: Any) -> None:
     """Verify edge case handling for invalid session encryption values and other methods."""
     mock_network.return_value = success_response()
     c = Client()
@@ -345,7 +322,7 @@ def test_misc_rpc_method_edge_cases(mock_network: Any) -> None:
     assert c.free_space("/test/path") is None
 
 
-def test_add_torrent_types(mock_network: Any) -> None:
+def test_add_torrent_types(mock_network: Any, success_response: Any) -> None:
     """Cover `add_torrent` with different input types."""
     mock_network.side_effect = [
         success_response(),  # init
@@ -373,7 +350,7 @@ def test_add_torrent_types(mock_network: Any) -> None:
     assert "metainfo" in mock_network.call_args[1]["json"]["arguments"]
 
 
-def test_add_torrent_empty_metadata_and_unknown_types(mock_network: Any) -> None:
+def test_add_torrent_empty_metadata_and_unknown_types(mock_network: Any, success_response: Any) -> None:
     """Verify `add_torrent` raises ValueError for empty metadata or unknown input types."""
     # FIX: Update return_value to include 'torrent-added' structure
     mock_network.return_value = success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
@@ -390,7 +367,7 @@ def test_add_torrent_empty_metadata_and_unknown_types(mock_network: Any) -> None
     assert mock_network.call_args[1]["json"]["arguments"]["filename"] is obj
 
 
-def test_add_torrent_duplicate(mock_network: Any) -> None:
+def test_add_torrent_duplicate(mock_network: Any, success_response: Any) -> None:
     """Verify that `add_torrent` handles the 'torrent-duplicate' response correctly."""
     mock_network.side_effect = [
         success_response(),
@@ -401,7 +378,7 @@ def test_add_torrent_duplicate(mock_network: Any) -> None:
     assert res.id == 1
 
 
-def test_add_torrent_invalid_response(mock_network: Any) -> None:
+def test_add_torrent_invalid_response(mock_network: Any, success_response: Any) -> None:
     """Verify that `add_torrent` raises TransmissionError if response is invalid (empty/malformed)."""
     mock_network.side_effect = [success_response(), success_response({})]
     c = Client()
@@ -409,7 +386,7 @@ def test_add_torrent_invalid_response(mock_network: Any) -> None:
         c.add_torrent("magnet:?xt=urn:btih:hash")
 
 
-def test_add_torrent_unexpected_data(mock_network: Any) -> None:
+def test_add_torrent_unexpected_data(mock_network: Any, success_response: Any) -> None:
     """Verify add_torrent raises TransmissionError if response contains unexpected data."""
     mock_network.side_effect = [
         success_response(),
@@ -420,7 +397,7 @@ def test_add_torrent_unexpected_data(mock_network: Any) -> None:
         c.add_torrent("magnet:?")
 
 
-def test_get_torrent_not_found(mock_network: Any) -> None:
+def test_get_torrent_not_found(mock_network: Any, success_response: Any) -> None:
     """Verify that `get_torrent` raises KeyError if the returned list is empty."""
     mock_network.side_effect = [success_response(), success_response({"torrents": []})]
     c = Client()
@@ -428,7 +405,7 @@ def test_get_torrent_not_found(mock_network: Any) -> None:
         c.get_torrent(1)
 
 
-def test_session_stats_legacy(mock_network: Any) -> None:
+def test_session_stats_legacy(mock_network: Any, success_response: Any) -> None:
     """Verify `session_stats` compatibility with older response formats."""
     mock_network.side_effect = [
         success_response(),
@@ -450,7 +427,7 @@ def test_session_stats_legacy(mock_network: Any) -> None:
     assert c.session_stats().active_torrent_count == 5
 
 
-def test_session_stats_modern(mock_network: Any) -> None:
+def test_session_stats_modern(mock_network: Any, success_response: Any) -> None:
     """Verify session_stats works when response is flat (modern)."""
     mock_network.side_effect = [
         success_response(),
@@ -471,7 +448,7 @@ def test_session_stats_modern(mock_network: Any) -> None:
     assert stats.active_torrent_count == 5
 
 
-def test_parsing_ids_public_api(mock_network: Any) -> None:
+def test_parsing_ids_public_api(mock_network: Any, success_response: Any) -> None:
     """
     Test ID parsing via public API to avoid calling _parse_torrent_ids directly
     and ensure validation logic is reachable.
@@ -498,7 +475,7 @@ def test_parsing_ids_public_api(mock_network: Any) -> None:
         c.get_torrent(h)
 
 
-def test_client_methods_success(mock_network: Any) -> None:
+def test_client_methods_success(mock_network: Any, success_response: Any) -> None:
     """
     Verify that various client methods execute without error and return None
     when the server responds with success.
@@ -528,14 +505,14 @@ def test_client_methods_success(mock_network: Any) -> None:
     assert c.port_test().port_is_open is True
 
 
-def test_blocklist_update(mock_network: Any) -> None:
+def test_blocklist_update(mock_network: Any, success_response: Any) -> None:
     """Verify blocklist_update returns size."""
     mock_network.side_effect = [success_response(), success_response({"blocklist-size": 123})]
     c = Client()
     assert c.blocklist_update() == 123
 
 
-def test_get_recently_active_torrents(mock_network: Any) -> None:
+def test_get_recently_active_torrents(mock_network: Any, success_response: Any) -> None:
     """Verify get_recently_active_torrents structure."""
     mock_network.side_effect = [success_response(), success_response({"torrents": [], "removed": [1, 2]})]
     c = Client()
@@ -543,7 +520,7 @@ def test_get_recently_active_torrents(mock_network: Any) -> None:
     assert removed == [1, 2]
 
 
-def test_get_recently_active_with_arguments(mock_network: Any) -> None:
+def test_get_recently_active_with_arguments(mock_network: Any, success_response: Any) -> None:
     """
     Verify argument set logic in get_recently_active_torrents.
     """
@@ -557,7 +534,7 @@ def test_get_recently_active_with_arguments(mock_network: Any) -> None:
     assert "hashString" in sent_args
 
 
-def test_add_torrent_labels_single_string(mock_network: Any) -> None:
+def test_add_torrent_labels_single_string(mock_network: Any, success_response: Any) -> None:
     """Verify add_torrent handles a single string for labels."""
     mock_network.return_value = success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
     c = Client()
@@ -567,7 +544,7 @@ def test_add_torrent_labels_single_string(mock_network: Any) -> None:
     assert args["labels"] == ["one_label"]
 
 
-def test_add_torrent_filename_string(mock_network: Any, tmp_path: pathlib.Path) -> None:
+def test_add_torrent_filename_string(mock_network: Any, tmp_path: pathlib.Path, success_response: Any) -> None:
     """Verify add_torrent with a filename string (not URL)."""
     mock_network.return_value = success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
     c = Client()

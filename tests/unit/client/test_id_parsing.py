@@ -1,4 +1,3 @@
-import json
 from typing import Any
 from unittest import mock
 
@@ -7,23 +6,8 @@ import pytest
 from transmission_rpc.client import Client
 
 
-def success_response(arguments: dict[str, Any] | None = None) -> mock.Mock:
-    """Helper to create a standard success response mock."""
-    args = arguments or {}
-    # Inject default version info required for Client init
-    args.setdefault("rpc-version", 17)
-    args.setdefault("version", "4.0.0")
-    args.setdefault("rpc-version-semver", "5.0.0")
-
-    return mock.Mock(
-        status=200,
-        headers={"x-transmission-session-id": "0"},
-        data=json.dumps({"result": "success", "arguments": args}).encode(),
-    )
-
-
 @pytest.fixture
-def mock_network() -> Any:
+def mock_network(success_response: Any) -> Any:
     """Fixture to patch urllib3 request."""
     with mock.patch("urllib3.HTTPConnectionPool.request") as m:
         m.return_value = success_response()

@@ -1,4 +1,5 @@
 import json
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -11,15 +12,6 @@ from transmission_rpc.error import (
     TransmissionError,
     TransmissionTimeoutError,
 )
-
-
-def _init_args() -> dict:
-    """Return standard version arguments required for Client initialization."""
-    return {
-        "rpc-version": 17,
-        "version": "4.0.0",
-        "rpc-version-semver": "5.0.0",
-    }
 
 
 def test_http_query_connection_error() -> None:
@@ -59,16 +51,12 @@ def test_http_query_too_many_requests() -> None:
             Client()
 
 
-def test_request_invalid_json() -> None:
+def test_request_invalid_json(success_response: Any) -> None:
     """Verify that invalid JSON in the response raises a TransmissionError and logs the exception."""
     with mock.patch("urllib3.HTTPConnectionPool.request") as mock_req:
         # 1. Init success (must include version info)
         mock_req.side_effect = [
-            mock.Mock(
-                status=200,
-                headers={},
-                data=json.dumps({"result": "success", "arguments": _init_args()}).encode(),
-            ),
+            success_response(),
             # 2. Invalid JSON for get_torrents
             mock.Mock(status=200, headers={}, data=b"invalid json"),
         ]
@@ -83,16 +71,12 @@ def test_request_invalid_json() -> None:
         c.logger.exception.assert_called()
 
 
-def test_request_failure_result() -> None:
+def test_request_failure_result(success_response: Any) -> None:
     """Verify that a JSON response with 'result': 'failure' raises a TransmissionError."""
     with mock.patch("urllib3.HTTPConnectionPool.request") as mock_req:
         # 1. Init success
         mock_req.side_effect = [
-            mock.Mock(
-                status=200,
-                headers={},
-                data=json.dumps({"result": "success", "arguments": _init_args()}).encode(),
-            ),
+            success_response(),
             # 2. Failure response
             mock.Mock(status=200, headers={}, data=json.dumps({"result": "failure", "arguments": {}}).encode()),
         ]
@@ -102,15 +86,11 @@ def test_request_failure_result() -> None:
             c.get_torrents()
 
 
-def test_request_missing_result() -> None:
+def test_request_missing_result(success_response: Any) -> None:
     """Verify that a response missing the 'result' field raises a TransmissionError."""
     with mock.patch("urllib3.HTTPConnectionPool.request") as mock_req:
         mock_req.side_effect = [
-            mock.Mock(
-                status=200,
-                headers={},
-                data=json.dumps({"result": "success", "arguments": _init_args()}).encode(),
-            ),
+            success_response(),
             mock.Mock(status=200, headers={}, data=json.dumps({"arguments": {}}).encode()),
         ]
 
