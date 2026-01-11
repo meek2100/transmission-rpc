@@ -244,20 +244,12 @@ def test_rpc_command_methods(mock_network: Any, success_response: Any) -> None:
         # return a valid torrent for start_all to operate on
         success_response({"torrents": [{"id": 1, "queuePosition": 0, "hashString": "h"}]}),  # start_all (get)
         success_response(),  # start_all (start)
-        success_response(),  # stop
-        success_response(),  # reannounce
         success_response({"blocklist-size": 10}),  # blocklist
     ]
     c = Client()
 
     # start_all bypass_queue
     c.start_all(bypass_queue=True)
-
-    # stop_torrent
-    c.stop_torrent(ids=1)
-
-    # reannounce_torrent
-    c.reannounce_torrent(ids=1)
 
     # blocklist_update
     assert c.blocklist_update() == 10

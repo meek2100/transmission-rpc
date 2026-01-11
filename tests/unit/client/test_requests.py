@@ -104,10 +104,10 @@ def test_request_missing_result(success_response: Any) -> None:
         c.logger.debug.assert_called()
 
 
-def test_client_methods_success(mock_network: Any, success_response: Any, tmp_path: pathlib.Path) -> None:
+def test_void_methods_return_none_on_success(mock_network: Any, success_response: Any, tmp_path: pathlib.Path) -> None:
     """
-    Verify that various client methods execute without error and return None
-    when the server responds with success.
+    Verify that simple pass-through methods (void return) execute without error and return None
+    upon a successful RPC response.
     """
     mock_network.return_value = success_response()
     c = Client()
