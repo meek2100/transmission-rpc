@@ -1,36 +1,12 @@
-import json
 import pathlib
 from typing import Any
-from unittest import mock
 
 import pytest
 
 from transmission_rpc.client import Client
 
 
-def success_response(arguments: dict[str, Any] | None = None) -> mock.Mock:
-    """Helper to create a standard success response mock."""
-    args = arguments or {}
-    # Inject default version info required for Client init
-    args.setdefault("rpc-version", 17)
-    args.setdefault("version", "4.0.0")
-    args.setdefault("rpc-version-semver", "5.0.0")
-
-    return mock.Mock(
-        status=200,
-        headers={"x-transmission-session-id": "0"},
-        data=json.dumps({"result": "success", "arguments": args}).encode(),
-    )
-
-
-@pytest.fixture
-def mock_network() -> Any:
-    """Fixture to patch urllib3 request."""
-    with mock.patch("urllib3.HTTPConnectionPool.request") as m:
-        yield m
-
-
-def test_remove_unset_value_via_set_session(mock_network: Any) -> None:
+def test_remove_unset_value_via_set_session(mock_network: Any, success_response: Any) -> None:
     """
     Verify `remove_unset_value` logic via `Client.set_session`.
     Passing `None` for a keyword argument should exclude it from the RPC payload.
@@ -47,7 +23,7 @@ def test_remove_unset_value_via_set_session(mock_network: Any) -> None:
     assert "speed-limit-down-enabled" not in sent_args
 
 
-def test_ensure_location_str_via_move_torrent(mock_network: Any, tmp_path: pathlib.Path) -> None:
+def test_ensure_location_str_via_move_torrent(mock_network: Any, tmp_path: pathlib.Path, success_response: Any) -> None:
     """
     Verify `ensure_location_str` logic via `Client.move_torrent_data`.
     """
@@ -66,7 +42,7 @@ def test_ensure_location_str_via_move_torrent(mock_network: Any, tmp_path: pathl
     assert sent_args["location"] == "/str/path"
 
 
-def test_ensure_location_str_error_via_move_torrent(mock_network: Any) -> None:
+def test_ensure_location_str_error_via_move_torrent(mock_network: Any, success_response: Any) -> None:
     """
     Verify `ensure_location_str` raises ValueError for relative paths via `Client.move_torrent_data`.
     """
@@ -79,7 +55,7 @@ def test_ensure_location_str_error_via_move_torrent(mock_network: Any) -> None:
         c.move_torrent_data(ids=1, location=p)
 
 
-def test_list_or_none_via_add_torrent(mock_network: Any) -> None:
+def test_list_or_none_via_add_torrent(mock_network: Any, success_response: Any) -> None:
     """
     Verify `list_or_none` logic via `Client.add_torrent`.
     Arguments like 'files_wanted' are processed by list_or_none.
@@ -104,7 +80,7 @@ def test_list_or_none_via_add_torrent(mock_network: Any) -> None:
     assert "files-wanted" not in args
 
 
-def test_try_read_torrent_urls_via_add_torrent(mock_network: Any) -> None:
+def test_try_read_torrent_urls_via_add_torrent(mock_network: Any, success_response: Any) -> None:
     """
     Verify `_try_read_torrent` logic via `Client.add_torrent` for URLs.
     """

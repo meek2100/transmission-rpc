@@ -147,12 +147,16 @@ def test_torrent_progress_and_availability() -> None:
     assert t.ratio == 1.0
 
     # Progress ZeroDivisionError check
-    # Force percentDone missing to trigger calculation
-    del t.fields["percentDone"]
-    t.fields["sizeWhenDone"] = 0
-    t.fields["leftUntilDone"] = 0
+    # Create new fields dict with percentDone missing to trigger calculation
+    # and sizeWhenDone/leftUntilDone as 0
+    fields_zero = {
+        "id": 1,
+        "sizeWhenDone": 0,
+        "leftUntilDone": 0,
+    }
+    t_zero = Torrent(fields=fields_zero)
     # Should catch ZeroDivisionError and return 0.0
-    assert t.progress == 0.0
+    assert t_zero.progress == 0.0
 
 
 def test_torrent_representation() -> None:
@@ -171,10 +175,16 @@ def test_torrent_representation() -> None:
 
     # format_eta edge cases
     assert t.format_eta() == "not available"
-    t.fields["eta"] = -2
-    assert t.format_eta() == "unknown"
-    t.fields["eta"] = 3600
-    assert t.format_eta() == "0 01:00:00"
+
+    fields_unknown = fields.copy()
+    fields_unknown["eta"] = -2
+    t_unknown = Torrent(fields=fields_unknown)
+    assert t_unknown.format_eta() == "unknown"
+
+    fields_valid = fields.copy()
+    fields_valid["eta"] = 3600
+    t_valid = Torrent(fields=fields_valid)
+    assert t_valid.format_eta() == "0 01:00:00"
 
     # Date fields
     data_full = {
@@ -263,14 +273,16 @@ def test_eta_and_date_handling() -> None:
     assert t.eta_idle is None
     assert t.done_date is None
 
-    fields["eta"] = -2
-    t = Torrent(fields=fields)
+    fields_unknown = fields.copy()
+    fields_unknown["eta"] = -2
+    t = Torrent(fields=fields_unknown)
     assert t.format_eta() == "unknown"
 
-    fields["eta"] = 3600
-    fields["etaIdle"] = 60
-    fields["doneDate"] = 1000000000
-    t = Torrent(fields=fields)
+    fields_valid = fields.copy()
+    fields_valid["eta"] = 3600
+    fields_valid["etaIdle"] = 60
+    fields_valid["doneDate"] = 1000000000
+    t = Torrent(fields=fields_valid)
     assert str(t.eta) == "1:00:00"
     assert str(t.eta_idle) == "0:01:00"
     assert t.done_date is not None

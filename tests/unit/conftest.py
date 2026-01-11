@@ -9,6 +9,36 @@ from transmission_rpc.client import Client
 
 
 @pytest.fixture
+def success_response() -> Any:
+    """
+    Helper to create a standard success response mock.
+    Returns a callable that produces the response.
+    """
+
+    def _response(arguments: dict[str, Any] | None = None) -> mock.Mock:
+        args = arguments or {}
+        # Inject default version info required for Client init
+        args.setdefault("rpc-version", 17)
+        args.setdefault("version", "4.0.0")
+        args.setdefault("rpc-version-semver", "5.0.0")
+
+        return mock.Mock(
+            status=200,
+            headers={"x-transmission-session-id": "0"},
+            data=json.dumps({"result": "success", "arguments": args}).encode(),
+        )
+
+    return _response
+
+
+@pytest.fixture
+def mock_network() -> Generator[mock.MagicMock, None, None]:
+    """Fixture to patch urllib3 request."""
+    with mock.patch("urllib3.HTTPConnectionPool.request") as m:
+        yield m
+
+
+@pytest.fixture
 def mock_http_client() -> Generator[mock.MagicMock, None, None]:
     """
     Mock the low-level urllib3 connection to simulate RPC responses without a real daemon.

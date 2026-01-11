@@ -222,7 +222,7 @@ def test_http_unix_init(tmp_path: pathlib.Path) -> None:
             assert c.url == "http+unix://localhost:9091/transmission/rpc"
 
 
-def test_client_init_edge_cases() -> None:
+def test_client_init_path_correction_and_https() -> None:
     """Cover Client init branches including path correction and HTTPS protocol."""
     with mock.patch.object(Client, "get_session", autospec=True):
         # path fix
@@ -389,10 +389,7 @@ def test_client_parse_url(
     """
     Verify that the Client correctly parses the URL from the given parameters.
     """
-    with (
-        mock.patch.object(Client, "_request"),
-        mock.patch.object(Client, "get_session"),
-    ):
+    with mock.patch.object(Client, "get_session"):
         client = Client(
             protocol=protocol,
             username=username,
