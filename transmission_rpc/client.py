@@ -283,8 +283,12 @@ class Client:
         """
         Send json-rpc request to Transmission using http POST
         """
+        if not isinstance(method, str):
+            raise TypeError("request takes method as string")
         if arguments is None:
             arguments = {}
+        if not isinstance(arguments, dict):
+            raise TypeError("request takes arguments should be dict")
 
         ids = _parse_torrent_ids(ids)
         if len(ids) > 0:
@@ -810,7 +814,7 @@ class Client:
         self._rpc_version_warning(15)
         torrent_id = _parse_torrent_id(torrent_id)
 
-        name = name.strip()  # Transmission daemon requires stripped names (see issue #185)
+        name = name.strip()  # https://github.com/trim21/transmission-rpc/issues/185
 
         result = self._request(
             RpcMethod.TorrentRenamePath,
