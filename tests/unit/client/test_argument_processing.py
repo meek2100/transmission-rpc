@@ -169,7 +169,7 @@ def test_add_torrent_raises_on_invalid_metadata(mock_network: Any, success_respo
 
     # Pass an unknown type to verify fallback logic
     obj = object()
-    c.add_torrent(obj)  # type: ignore
+    c.add_torrent(obj)  # type: ignore[arg-type]
     # Should treat as filename
     assert mock_network.call_args[1]["json"]["arguments"]["filename"] is obj
 

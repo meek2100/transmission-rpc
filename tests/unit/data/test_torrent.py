@@ -284,7 +284,7 @@ def test_status_unknown() -> None:
     assert get_status(999) == "unknown status 999"
 
 
-def test_activity_date_zero() -> None:
+def test_activity_date_handles_zero_value() -> None:
     """
     Verify that a Torrent object correctly handles the 'activityDate' field being 0 (non-active).
     """

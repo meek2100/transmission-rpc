@@ -296,11 +296,11 @@ def test_session_close_and_context_manager() -> None:
         ),
     ],
 )
-def test_client_url_construction(
+def test_legacy_client_url_construction(
     protocol: Literal["http", "https"], username: str, password: str | None, host: str, port: int, path: str
 ) -> None:
     """
-    Verify that the Client correctly parses the URL from the given parameters.
+    Verify that the Client correctly parses the URL from the given parameters (Legacy).
     """
     with mock.patch.object(Client, "get_session"):
         client = Client(
