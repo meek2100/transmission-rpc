@@ -7,7 +7,7 @@ from transmission_rpc.client import Client
 
 
 @pytest.mark.parametrize("arg", [float(1), "non-hash-string"])
-def test_parse_id_raise(mock_network: Any, success_response: Any, arg: Any) -> None:
+def test_start_torrent_raises_on_invalid_id(mock_network: Any, success_response: Any, arg: Any) -> None:
     """
     Verify that invalid torrent IDs raise ValueError.
     We use start_torrent to trigger ID parsing validation.

@@ -31,23 +31,6 @@ def test_torrent_missing_optional_fields() -> None:
     assert t.get_files()[0].selected is None
 
 
-def test_torrent_status_properties() -> None:
-    """Verify that Status objects correctly report their state (e.g., checking, downloading)."""
-    s = Status("checking")
-    assert s.checking
-    assert not s.stopped
-    s = Status("check pending")
-    assert s.check_pending
-    s = Status("downloading")
-    assert s.downloading
-    s = Status("download pending")
-    assert s.download_pending
-    s = Status("seeding")
-    assert s.seeding
-    s = Status("seed pending")
-    assert s.seed_pending
-
-
 def test_torrent_status_and_idle_mode_mapping() -> None:
     """Verify miscellaneous Torrent properties like seed_idle_mode and status string mapping."""
     fields = {
@@ -225,8 +208,27 @@ def test_file_stat_properties_access() -> None:
     check_properties(FileStat, f)
 
 
-def test_status_properties_full() -> None:
+def test_status_mapping() -> None:
     """Verify that Status objects correctly report boolean states (e.g., stopped, checking) and string representation."""
+    s = Status("checking")
+    assert s.checking
+    assert not s.stopped
+
+    s = Status("check pending")
+    assert s.check_pending
+
+    s = Status("downloading")
+    assert s.downloading
+
+    s = Status("download pending")
+    assert s.download_pending
+
+    s = Status("seeding")
+    assert s.seeding
+
+    s = Status("seed pending")
+    assert s.seed_pending
+
     s = Status("stopped")
     assert s.stopped is True
     assert s.check_pending is False

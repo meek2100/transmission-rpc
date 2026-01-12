@@ -243,7 +243,7 @@ def test_session_close_and_context_manager() -> None:
         # Mock request for session_close
         mock_instance.request.return_value = mock.Mock(
             status=200,
-            headers={},  # FIX: Added headers to satisfy Client response validation
+            headers={},  # Headers are required because Client validation checks for the session ID key.
             data=json.dumps({"result": "success", "arguments": {}}).encode(),
         )
 
