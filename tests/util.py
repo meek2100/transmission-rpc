@@ -1,7 +1,7 @@
 import contextlib
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar, cast
 
 import pytest
 
@@ -54,7 +54,7 @@ def skip_on(exception: type[Exception], reason: str = "Default reason") -> Calla
                 # just swallow it and raise pytest.Skip with given reason
                 pytest.skip(reason)
                 # Static analysis assistance; pytest.skip raises, but return type must match
-                return None  # type: ignore[return-value]
+                return cast("R", None)
 
         return wrapper
 

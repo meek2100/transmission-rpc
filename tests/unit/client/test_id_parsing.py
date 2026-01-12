@@ -1,5 +1,5 @@
 import contextlib
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -79,7 +79,7 @@ def test_public_api_validates_torrent_ids(mock_network: Any, success_response: A
 
     # Test invalid type
     with pytest.raises(ValueError, match="Invalid torrent id"):
-        c.start_torrent(ids=1.5)  # type: ignore[arg-type]
+        c.start_torrent(ids=cast("Any", 1.5))
 
     # Test valid hash string
     h = "a" * 40
