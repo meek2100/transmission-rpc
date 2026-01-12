@@ -1,5 +1,4 @@
 import calendar
-import contextlib
 import datetime
 import time
 from typing import Any
@@ -9,18 +8,8 @@ import pytest
 import transmission_rpc
 import transmission_rpc.constants
 import transmission_rpc.utils
+from tests.util import check_properties
 from transmission_rpc.torrent import FileStat, Status, Torrent, get_status
-
-
-def check_properties(cls: type, obj: Any) -> None:
-    """Iterate over all public properties of a class to ensure getters do not raise exceptions."""
-    for prop in dir(cls):
-        # Skip private/protected properties to adhere to public API testing
-        if prop.startswith("_"):
-            continue
-        if isinstance(getattr(cls, prop), property):
-            with contextlib.suppress(KeyError, DeprecationWarning):
-                getattr(obj, prop)
 
 
 def assert_property_exception(exception: type[Exception], ob: Any, prop: str) -> None:

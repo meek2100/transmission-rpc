@@ -1,4 +1,5 @@
 import json
+import logging
 import pathlib
 from typing import Any
 from unittest import mock
@@ -62,9 +63,8 @@ def test_request_invalid_json(success_response: Any) -> None:
             mock.Mock(status=200, headers={}, data=b"invalid json"),
         ]
 
-        c = Client()
-        # Enable logging to verify exception logging
-        c.logger = mock.Mock()
+        # Inject logger via constructor, using spec to pass isinstance check
+        c = Client(logger=mock.Mock(spec=logging.Logger))
 
         with pytest.raises(TransmissionError, match="failed to parse response"):
             c.get_torrents()
@@ -95,8 +95,8 @@ def test_request_missing_result(success_response: Any) -> None:
             mock.Mock(status=200, headers={}, data=json.dumps({"arguments": {}}).encode()),
         ]
 
-        c = Client()
-        c.logger = mock.Mock()
+        # Inject logger via constructor, using spec to pass isinstance check
+        c = Client(logger=mock.Mock(spec=logging.Logger))
 
         with pytest.raises(TransmissionError, match="missing without result"):
             c.get_torrents()

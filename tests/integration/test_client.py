@@ -81,7 +81,7 @@ def test_torrent_start_all(tr_client: Client) -> None:
         assert torrent.downloading or torrent.checking, "All torrents should be downloading or checking after start_all"
 
 
-def test_session_get(tr_client: Client) -> None:
+def test_session_get_returns_valid_rpc_version(tr_client: Client) -> None:
     """
     Integration test: Verify `get_session` returns session information without error.
     """

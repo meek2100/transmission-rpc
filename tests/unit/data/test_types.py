@@ -1,27 +1,12 @@
-import contextlib
-from typing import Any
 from unittest import mock
 
 import pytest
 
+from tests.util import check_properties
 from transmission_rpc.constants import Args, Type, get_torrent_arguments
 from transmission_rpc.error import TransmissionError
 from transmission_rpc.torrent import Peer, PeersFrom, Tracker, TrackerStats
 from transmission_rpc.types import BitMap, Container, Group, PortTestResult
-
-
-def check_properties(cls: type, obj: Any) -> None:
-    """
-    Helper function to access all public properties of a class instance
-    to ensure no errors are raised.
-    """
-    for prop in dir(cls):
-        # Skip private/protected properties
-        if prop.startswith("_"):
-            continue
-        if isinstance(getattr(cls, prop), property):
-            with contextlib.suppress(KeyError, DeprecationWarning):
-                getattr(obj, prop)
 
 
 def test_container_repr() -> None:

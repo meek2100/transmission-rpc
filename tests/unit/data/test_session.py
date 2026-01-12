@@ -1,21 +1,5 @@
-import contextlib
-from typing import Any
-
+from tests.util import check_properties
 from transmission_rpc.session import Session, SessionStats, Stats, Units
-
-
-def check_properties(cls: type, obj: Any) -> None:
-    """
-    Helper function to iterate over all public properties of a class and access them on an instance.
-    This ensures that property getters are covered and don't raise unexpected exceptions.
-    """
-    for prop in dir(cls):
-        # Skip private/protected properties
-        if prop.startswith("_"):
-            continue
-        if isinstance(getattr(cls, prop), property):
-            with contextlib.suppress(KeyError, DeprecationWarning):
-                getattr(obj, prop)
 
 
 def test_session_property_explicit() -> None:

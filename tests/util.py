@@ -1,12 +1,27 @@
+import contextlib
 from collections.abc import Callable
 from functools import wraps
-from typing import ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar
 
 import pytest
 
 # Define TypeVars for decorator typing
 P = ParamSpec("P")
 R = TypeVar("R")
+
+
+def check_properties(cls: type, obj: Any) -> None:
+    """
+    Helper function to iterate over all public properties of a class and access them on an instance.
+    This ensures that property getters are covered and don't raise unexpected exceptions.
+    """
+    for prop in dir(cls):
+        # Skip private/protected properties
+        if prop.startswith("_"):
+            continue
+        if isinstance(getattr(cls, prop), property):
+            with contextlib.suppress(KeyError, DeprecationWarning):
+                getattr(obj, prop)
 
 
 class ServerTooLowError(Exception):
