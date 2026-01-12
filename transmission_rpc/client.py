@@ -810,7 +810,7 @@ class Client:
         self._rpc_version_warning(15)
         torrent_id = _parse_torrent_id(torrent_id)
 
-        name = name.strip()  # https://github.com/trim21/transmission-rpc/issues/185
+        name = name.strip()  # Transmission daemon requires stripped names (see issue #185)
 
         result = self._request(
             RpcMethod.TorrentRenamePath,

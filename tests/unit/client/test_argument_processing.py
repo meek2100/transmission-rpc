@@ -60,7 +60,7 @@ def test_move_torrent_raises_on_relative_path(mock_network: Any, success_respons
         c.move_torrent_data(ids=1, location=p)
 
 
-def test_add_torrent_handles_list_or_none(mock_network: Any, success_response: Any) -> None:
+def test_add_torrent_serializes_list_arguments(mock_network: Any, success_response: Any) -> None:
     """
     Verify `list_or_none` logic via `Client.add_torrent`.
     Arguments like 'files_wanted' are processed by list_or_none.
@@ -158,7 +158,7 @@ def test_add_torrent_types(mock_network: Any, success_response: Any) -> None:
     assert "metainfo" in mock_network.call_args[1]["json"]["arguments"]
 
 
-def test_add_torrent_empty_metadata_and_unknown_types(mock_network: Any, success_response: Any) -> None:
+def test_add_torrent_raises_on_invalid_metadata(mock_network: Any, success_response: Any) -> None:
     """Verify `add_torrent` raises ValueError for empty metadata or unknown input types."""
     mock_network.return_value = success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
     c = Client()
