@@ -32,7 +32,7 @@ def test_torrent_missing_optional_fields() -> None:
 
 
 def test_torrent_status_and_idle_mode_mapping() -> None:
-    """Verify miscellaneous Torrent properties like seed_idle_mode and status string mapping."""
+    """Verify `seed_idle_mode` enum conversion and `status` property string mapping."""
     fields = {
         "id": 1,
         "seedIdleMode": 0,  # global

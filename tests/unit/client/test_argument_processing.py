@@ -84,7 +84,7 @@ def test_add_torrent_serializes_list_arguments(mock_network: Any, success_respon
     assert "files-wanted" not in args
 
 
-def test_add_torrent_treats_urls_as_filenames(mock_network: Any, success_response: Any) -> None:
+def test_add_torrent_sends_url_as_filename_argument(mock_network: Any, success_response: Any) -> None:
     """
     Verify `_try_read_torrent` logic via `Client.add_torrent` for URLs.
     """

@@ -107,13 +107,13 @@ def test_from_url_http_unix_no_host() -> None:
 def test_client_init_invalid_protocol() -> None:
     """Verify that initializing Client with an invalid protocol raises a ValueError."""
     with pytest.raises(ValueError, match="Unknown protocol"):
-        Client(protocol=cast("Any", "ftp"))
+        Client(protocol=cast(Any, "ftp"))
 
 
 def test_client_init_logger_error() -> None:
     """Verify that initializing Client with a non-logger object raises a TypeError."""
     with pytest.raises(TypeError, match="logger must be instance"):
-        Client(logger=cast("Any", "not_a_logger"))
+        Client(logger=cast(Any, "not_a_logger"))
 
 
 def test_timeout_property(client: Client) -> None:
@@ -130,7 +130,7 @@ def test_timeout_property(client: Client) -> None:
     assert client.timeout is not None
     assert client.timeout.total == 30.0
     with pytest.raises(TypeError, match="must use Timeout instance"):
-        client.timeout = cast("Any", 5.0)
+        client.timeout = cast(Any, 5.0)
 
 
 def test_deprecated_properties(client: Client) -> None:

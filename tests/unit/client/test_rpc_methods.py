@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, cast
 from unittest import mock
 
 import pytest
@@ -260,7 +260,7 @@ def test_set_session_invalid_encryption_value(mock_network: Any, success_respons
     mock_network.return_value = success_response()
     c = Client()
     with pytest.raises(ValueError, match="Invalid encryption value"):
-        c.set_session(encryption="invalid")  # type: ignore
+        c.set_session(encryption=cast(Any, "invalid"))
 
 
 def test_start_torrent_bypass_queue_argument(mock_network: Any, success_response: Any) -> None:
