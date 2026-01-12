@@ -33,7 +33,12 @@ def success_response() -> Any:
 
 @pytest.fixture
 def mock_network() -> Generator[mock.MagicMock, None, None]:
-    """Fixture to patch urllib3 request."""
+    """
+    Fixture to patch the urllib3.HTTPConnectionPool.request method.
+
+    This allows tests to intercept network calls and assert on the arguments
+    passed to the request without making actual network connections.
+    """
     with mock.patch("urllib3.HTTPConnectionPool.request") as m:
         yield m
 

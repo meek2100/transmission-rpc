@@ -167,7 +167,7 @@ def test_add_torrent_raises_on_invalid_metadata(mock_network: Any, success_respo
     with pytest.raises(ValueError, match="Torrent metadata is empty"):
         c.add_torrent(b"")
 
-    # Unknown type
+    # Pass an unknown type to verify fallback logic
     obj = object()
     c.add_torrent(obj)  # type: ignore
     # Should treat as filename
