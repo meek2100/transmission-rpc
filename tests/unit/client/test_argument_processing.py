@@ -115,7 +115,7 @@ def test_add_torrent_raises_on_file_scheme(mock_network: Any, success_response: 
 
 
 def test_add_torrent_args(mock_network: Any, success_response: Any) -> None:
-    """Cover `add_torrent` arguments serialization."""
+    """Verify that `add_torrent` correctly serializes optional arguments (e.g., `labels`, `bandwidthPriority`) into the RPC payload."""
     mock_network.side_effect = [
         success_response(),  # init
         success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}}),
@@ -130,7 +130,7 @@ def test_add_torrent_args(mock_network: Any, success_response: Any) -> None:
     assert sent_args["bandwidthPriority"] == 1
 
 
-def test_add_torrent_types(mock_network: Any, success_response: Any) -> None:
+def test_add_torrent_handles_various_input_types(mock_network: Any, success_response: Any) -> None:
     """Cover `add_torrent` with different input types."""
     mock_network.side_effect = [
         success_response(),  # init

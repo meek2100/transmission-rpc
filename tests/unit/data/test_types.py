@@ -1,5 +1,3 @@
-from unittest import mock
-
 import pytest
 
 from tests.util import check_properties
@@ -108,11 +106,14 @@ def test_error_str_with_original() -> None:
     """
     Verify that `TransmissionError` correctly formats its string representation when wrapping another exception.
     """
-    original = mock.Mock()
-    original.__str__ = mock.Mock(return_value="original error")  # type: ignore[method-assign]
-    type(original).__name__ = "OriginalError"
+
+    class MockError(Exception):
+        def __str__(self) -> str:
+            return "original error"
+
+    original = MockError()
     err = TransmissionError("message", original=original)
-    assert str(err) == 'message Original exception: OriginalError, "original error"'
+    assert str(err) == 'message Original exception: MockError, "original error"'
 
 
 def test_deprecated_raw_response() -> None:

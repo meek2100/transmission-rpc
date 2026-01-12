@@ -206,7 +206,7 @@ def test_context_manager_error(client: Client) -> None:
 
 
 def test_client_init_http_unix(tmp_path: pathlib.Path) -> None:
-    """Cover initialization of http+unix protocol to ensure correct URL construction."""
+    """Verify that the HTTP client is initialized with the correct `UnixHTTPConnectionPool` when using the 'http+unix' protocol."""
     socket_path = str(tmp_path / "test")
     with (
         mock.patch("transmission_rpc.client.UnixHTTPConnectionPool") as mock_pool,
@@ -321,7 +321,7 @@ def test_client_url_construction(
     "status_code",
     [401, 403],
 )
-def test_raise_unauthorized(status_code: int) -> None:
+def test_init_raises_auth_error_on_401_403(status_code: int) -> None:
     """
     Verify that Client raises TransmissionAuthError when the server returns 401 or 403.
     """
