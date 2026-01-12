@@ -237,7 +237,7 @@ def test_get_group_empty(mock_network: Any, success_response: Any) -> None:
     assert c.get_group("missing") is None
 
 
-def test_rpc_command_methods(mock_network: Any, success_response: Any) -> None:
+def test_passthrough_rpc_commands(mock_network: Any, success_response: Any) -> None:
     """Verify execution of client command methods."""
     mock_network.side_effect = [
         success_response(),  # init
@@ -256,7 +256,7 @@ def test_rpc_command_methods(mock_network: Any, success_response: Any) -> None:
 
 
 def test_set_session_invalid_encryption_value(mock_network: Any, success_response: Any) -> None:
-    """Verify that set_session raises ValueError for invalid encryption options."""
+    """Verify that set_session raises ValueError when passed an invalid encryption mode string."""
     mock_network.return_value = success_response()
     c = Client()
     with pytest.raises(ValueError, match="Invalid encryption value"):

@@ -10,7 +10,7 @@ from transmission_rpc.client import Client
 from transmission_rpc.error import TransmissionError
 
 
-def test_set_session_filters_none_values(mock_network: Any, success_response: Any) -> None:
+def test_set_session_excludes_none_values(mock_network: Any, success_response: Any) -> None:
     """
     Verify that None values in kwargs are removed from the payload sent to the server.
 
@@ -214,7 +214,9 @@ def test_add_torrent_labels_single_string(mock_network: Any, success_response: A
     assert args["labels"] == ["one_label"]
 
 
-def test_add_torrent_filename_string(mock_network: Any, tmp_path: pathlib.Path, success_response: Any) -> None:
+def test_add_torrent_treats_string_as_filename(
+    mock_network: Any, tmp_path: pathlib.Path, success_response: Any
+) -> None:
     """Verify add_torrent with a filename string (not URL)."""
     mock_network.return_value = success_response({"torrent-added": {"id": 1, "name": "n", "hashString": "h"}})
     c = Client()
